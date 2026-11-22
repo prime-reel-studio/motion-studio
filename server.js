@@ -70,7 +70,13 @@ app.post('/api/login', (req, res) => {
   }
   res.status(401).json({ ok: false, message: 'wrong passcode' });
 });
-app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'recap-v12-episode-evidence' }));
+function memoryCeilingMiB(){
+ for(const file of ['/sys/fs/cgroup/memory.max','/sys/fs/cgroup/memory/memory.limit_in_bytes']){
+  try{const n=Number(fs.readFileSync(file,'utf8').trim());if(Number.isFinite(n)&&n>0&&n<1e15)return Math.floor(n/1048576);}catch{}
+ }
+ return null;
+}
+app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'recap-v12-episode-evidence', memoryCeilingMiB:memoryCeilingMiB() }));
 // Everything else under /api, and all user content, requires the gate.
 app.use((req, res, next) => {
   const p = req.path;
