@@ -372,7 +372,7 @@ async function pollJob(jobId) {
     $('downloadLink').style.display = 'block';
     document.getElementById('creditsLink')?.remove();
     if(job.creditsUrl){const a=document.createElement('a');a.id='creditsLink';a.href=job.creditsUrl;a.download='credits.txt';a.className='btn';a.textContent='تحميل المصادر والرخص، احتفظ بيها مع الفيديو';$('downloadLink').after(a);}
-    loadPublishExtras(job);
+    if($('renderMode').value==='recap'){$('publishBox').style.display='none';}else loadPublishExtras(job);
     $('renderBtn').disabled = false;
     return;
   }
