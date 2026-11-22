@@ -399,20 +399,25 @@ async function loadPublishExtras(job) {
       $('captionAiNote').textContent = d.ai ? '✨ AI' : 'ℹ️ قاعدة جاهزة (فعّل مفتاح Gemini لكابشن بالذكاء الاصطناعي)';
     }
   } catch (e) { console.warn('caption suggest failed', e); }
-  try {
-    const r2 = await fetch('/api/thumbnail', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ outName: job.outName || (job.url || '').split('/').pop(), title: job.title || (lastRenderForm && lastRenderForm.title) || '' })
-    });
-    const d2 = await r2.json();
-    if (d2 && d2.url) {
-      const img = $('thumbPreview');
-      img.src = d2.url; img.style.display = 'block';
-      const a = $('thumbLink');
-      a.href = d2.url; a.download = d2.name || 'thumbnail.jpg'; a.style.display = 'inline-block';
-    }
-  } catch (e) { console.warn('thumbnail failed', e); }
+  // The mp4 may still be flushing when render-done fires; retry the thumbnail a few times.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      if (attempt) await new Promise((r) => setTimeout(r, 2500));
+      const r2 = await fetch('/api/thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outName: job.outName || (job.url || '').split('/').pop(), title: job.title || (lastRenderForm && lastRenderForm.title) || '' })
+      });
+      const d2 = await r2.json();
+      if (d2 && d2.url) {
+        const img = $('thumbPreview');
+        img.src = d2.url; img.style.display = 'block';
+        const a = $('thumbLink');
+        a.href = d2.url; a.download = d2.name || 'thumbnail.jpg'; a.style.display = 'inline-block';
+        break;
+      }
+    } catch (e) { console.warn('thumbnail attempt ' + attempt + ' failed', e); }
+  }
 }
 
 $('copyCaption').addEventListener('click', async () => {
