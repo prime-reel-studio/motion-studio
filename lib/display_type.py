@@ -63,7 +63,6 @@ for gi, group in enumerate(groups):
                       stroke_fill=(0,0,0,220), **opts)
             y += line_heights[li] + line_gap
         name = os.path.join(cfg['outDir'], 'type_%s_%s_%s.png' % (idx, gi, revealed))
-        image.save(name)
         start = .10 + cursor*word_span
         end = .10 + (cursor+1)*word_span
         if layout == 1:
@@ -75,11 +74,17 @@ for gi, group in enumerate(groups):
         if cfg.get('logo'):
             center_y = H*.77
         y = round(center_y-height/2)
-        y = min(max(round(H*.13), y), round(H*.83)-height)
+        y = min(max(round(H*.13), y), round(H*(.75 if cfg.get('credit',{}).get('provider') == 'Wikimedia Commons' else .83))-height)
+        canvas = Image.new('RGBA', (W,H), (0,0,0,0))
+        canvas.alpha_composite(image,(x,y))
+        canvas.save(name)
         manifest.append({'file': name, 'start': round(start,4), 'end': round(end,4),
-                         'x': x, 'y': y, 'wordCount': revealed,
+                         'x': 0, 'y': 0, 'wordCount': revealed,
                          'entrance': (idx+gi)%3})
         cursor += 1
+blank_path = os.path.join(cfg['outDir'], 'type_%s_blank.png' % idx)
+Image.new('RGBA',(W,H),(0,0,0,0)).save(blank_path)
+manifest.append({'file':blank_path,'wordCount':-1})
 credit = cfg.get('credit') or {}
 if credit.get('provider') == 'Wikimedia Commons':
     # Persistent attribution survives posting, alongside the downloadable full credits.
@@ -93,5 +98,5 @@ if credit.get('provider') == 'Wikimedia Commons':
         draw.text((14, 10+n*lh),line,font=font,fill='white',direction='ltr')
     name = os.path.join(cfg['outDir'], 'credit_%s.png' % idx)
     img.save(name)
-    manifest.append({'file':name,'start':0,'end':duration,'x':round(W*.03),'y':round(H*.95)-img.height,'wordCount':0,'entrance':3})
+    manifest.append({'file':name,'start':0,'end':duration,'x':round(W*.03),'y':H-280-img.height,'wordCount':0,'entrance':3})
 print(json.dumps(manifest))
