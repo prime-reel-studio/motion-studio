@@ -17,6 +17,16 @@
 <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
+<div id="lockScreen" class="lock-screen" style="display:none">
+  <div class="lock-card">
+    <img src="icons/icon-192.png" alt="Prime Academy" />
+    <h2 data-i18n="lockTitle">استوديو برايم</h2>
+    <p data-i18n="lockSub">الاستوديو ده خاص — ادخل كلمة السر</p>
+    <input type="password" id="lockInput" inputmode="text" autocomplete="current-password" data-i18n-ph="lockPh" placeholder="كلمة السر" />
+    <button id="lockBtn" class="primary big" data-i18n="lockBtn">دخول</button>
+    <div id="lockMsg" class="hint"></div>
+  </div>
+</div>
 <header class="topbar">
   <div class="brand">
     <img class="logo" src="icons/icon-192.png" alt="Prime Academy" />

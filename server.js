@@ -38,6 +38,41 @@ try {
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
+
+// ---------- access gate: single shared passcode (personal app) ----------
+const SITE_PASSCODE = (process.env.SITE_PASSCODE || '').trim();
+const GATE_SECRET = process.env.GATE_SECRET || SITE_PASSCODE || 'dev-open';
+const gateToken = () => crypto.createHmac('sha256', GATE_SECRET).update('studio-gate-v1').digest('hex');
+function readCookie(req, name) {
+  const raw = req.headers.cookie || '';
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i > -1 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return null;
+}
+function gateOpen(req) {
+  if (!SITE_PASSCODE) return true; // local dev without a passcode stays open
+  return readCookie(req, 'studio_auth') === gateToken();
+}
+app.post('/api/login', (req, res) => {
+  if (!SITE_PASSCODE) return res.json({ ok: true });
+  const { passcode } = req.body || {};
+  if (String(passcode || '').trim() === SITE_PASSCODE) {
+    res.setHeader('Set-Cookie',
+      'studio_auth=' + gateToken() + '; Path=/; HttpOnly; SameSite=Lax; Max-Age=' + (60 * 60 * 24 * 60) + '; Secure');
+    return res.json({ ok: true });
+  }
+  res.status(401).json({ ok: false, message: 'wrong passcode' });
+});
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
+// Everything else under /api, and all user content, requires the gate.
+app.use((req, res, next) => {
+  const p = req.path;
+  const gated = p.startsWith('/api/') || p.startsWith('/uploads') || p.startsWith('/renders') || p.startsWith('/tmp');
+  if (gated && !gateOpen(req)) return res.status(401).json({ ok: false, message: 'locked' });
+  next();
+});
 app.use(express.static(path.join(ROOT, 'public'), {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.webmanifest')) res.setHeader('Content-Type', 'application/manifest+json');

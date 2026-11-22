@@ -20,6 +20,10 @@ async function api(path, opts = {}) {
     ...opts,
   });
   const json = await res.json().catch(() => ({}));
+  if (res.status === 401 && path !== '/api/login') {
+    showLockScreen();
+    throw Object.assign(new Error('locked'), { status: 401, json, locked: true });
+  }
   if (!res.ok) throw Object.assign(new Error(json.message || res.statusText), { status: res.status, json });
   return json;
 }
@@ -48,7 +52,10 @@ async function fetchConfigWithRetry() {
   let lastErr;
   for (let i = 0; i < 15; i++) {
     try { return await api('/api/config'); }
-    catch (e) { lastErr = e; await new Promise((r) => setTimeout(r, 5000)); }
+    catch (e) {
+      if (e && (e.locked || e.status === 401)) throw e; // passcode gate: never retry, show lock
+      lastErr = e; await new Promise((r) => setTimeout(r, 5000));
+    }
   }
   throw lastErr || new Error('config unreachable');
 }
@@ -505,7 +512,39 @@ async function applyTemplate(tp) {
   try { $('breakdownBtn').click(); } catch (e) { /* user can click */ }
 }
 
-/* ---------- boot (must be last: const TEMPLATES/TL_COLORS above are TDZ until here) ---------- */
-init().catch((e) => { console.error(e); showFatalHint(e); });
+
+/* ---------- passcode gate ---------- */
+function showLockScreen() {
+  const el = $('lockScreen');
+  if (el) { el.style.display = 'flex'; setTimeout(() => $('lockInput') && $('lockInput').focus(), 50); }
+}
+function hideLockScreen() { const el = $('lockScreen'); if (el) el.style.display = 'none'; }
+async function tryUnlock() {
+  const input = $('lockInput');
+  const msg = $('lockMsg');
+  msg.textContent = '';
+  try {
+    const r = await fetch('/api/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ passcode: input.value })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) { hideLockScreen(); bootApp(); }
+    else { msg.textContent = t('lockWrong'); input.select(); }
+  } catch (e) { msg.textContent = t('lockWrong'); }
+}
+$('lockBtn').addEventListener('click', tryUnlock);
+$('lockInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
+
+let booted = false;
+async function bootApp() {
+  if (booted) return;
+  booted = true;
+  try { await init(); } catch (e) {
+    if (e && e.locked) { booted = false; return; }
+    console.error(e); showFatalHint(e);
+  }
+}
+bootApp();
 document.addEventListener('DOMContentLoaded', () => setTimeout(ensureBuilt, 300));
 window.addEventListener('load', () => setTimeout(ensureBuilt, 800));
