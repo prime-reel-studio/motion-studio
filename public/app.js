@@ -54,18 +54,24 @@ async function fetchConfigWithRetry() {
 }
 
 async function init() {
+  window.__initStage = 'start';
   applyI18n();
   buildTemplates();
+  window.__initStage = 'pre-config';
   state.config = await fetchConfigWithRetry();
+  window.__initStage = 'config';
   buildVoiceSelect();
   buildMusicSelect();
   buildPresetRow();
   buildAspectRow();
   updateKeyPill();
+  window.__initStage = 'rows';
   bindEvents();
+  window.__initStage = 'bound';
   await refreshMedia();
   await refreshProjects();
   renderScenes();
+  window.__initStage = 'done';
 }
 
 function updateKeyPill() {
