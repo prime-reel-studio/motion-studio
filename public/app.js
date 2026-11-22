@@ -643,6 +643,8 @@ async function autoStockScenes() {
 
 function applyRecapMode(){
  const recap=$('renderMode').value==='recap';
+ $('musicSelect').disabled=recap;$('musicVol').disabled=recap;$('sfxToggle').disabled=recap;
+ if(recap){$('sfxToggle').checked=false;$('musicSelect').value='';state.musicTrack=null;}
  if(recap){state.aspect='16:9';$('autoStock').checked=false;$('autoStock').disabled=true;$('autoStockBtn').disabled=true;buildAspectRow();}
  else {$('autoStock').disabled=false;$('autoStockBtn').disabled=false;}
  $('recapCapability').textContent=recap?'تصدير ملخص أفقي من ملفاتك: كل مشهد محتاج ميديا وتعليق مرفوع. لا سحب تلقائي للحلقات، ولا تأليف أو أصوات متصلة حاليًا.':'مسار الموشن الحالي. مسار الملخص منفصل ولا يستبدل مشاهد المسلسلات بفيديوهات مخزون.';

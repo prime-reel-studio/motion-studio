@@ -254,3 +254,6 @@ button.mini {background:#1d1d28;border:1px solid var(--border);color:var(--text)
 
 .stock-picker input {background:#0e0e14;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px;font:inherit;}
 .stock-result a,.scene-body > a {color:var(--muted);overflow-wrap:anywhere;}
+
+#recapPanel input:not([type=file]), .scene-body input[type=url], .scene-body input:not([type]) {box-sizing:border-box;width:100%;min-width:0;background:#0d0d14;color:#eee5d3;border:1px solid #30303b;border-radius:9px;padding:11px;font:inherit;}
+#recapPanel input[type=file], #mediaInput {box-sizing:border-box;max-width:100%;width:100%;color:#aaa;padding:10px 0;}
