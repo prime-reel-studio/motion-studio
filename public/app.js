@@ -34,6 +34,8 @@ function projectPayload() {
     title: state.projectName || 'reel',
     renderMode: $('renderMode').value,
     episodeLabel: $('episodeLabel').value,
+    episodePrompt: $('episodePrompt').value,
+    episodeEvidence: state.episodeEvidence || null,
     aspect: state.aspect,
     preset: state.preset,
     motionTheme: $('motionTheme').value,
@@ -410,6 +412,7 @@ async function loadProject(name) {
   state.preset = data.preset || 'cinematic';
   $('renderMode').value=data.renderMode||'motion';
   $('episodeLabel').value=data.episodeLabel||'';
+  $('episodePrompt').value=data.episodePrompt||'';state.episodeEvidence=data.episodeEvidence||null;
   applyRecapMode();
   $('motionTheme').value = data.motionTheme || 'random';
   state.aspect = data.aspect || '9:16';
@@ -649,7 +652,20 @@ function applyRecapMode(){
  else {$('autoStock').disabled=false;$('autoStockBtn').disabled=false;}
  $('recapCapability').textContent=recap?'تصدير ملخص أفقي من ملفاتك: كل مشهد محتاج ميديا وتعليق مرفوع. لا سحب تلقائي للحلقات، ولا تأليف أو أصوات متصلة حاليًا.':'مسار الموشن الحالي. مسار الملخص منفصل ولا يستبدل مشاهد المسلسلات بفيديوهات مخزون.';
 }
+function showEpisodeEvidence(r){
+ const box=$('episodeEvidence');box.replaceChildren();state.episodeEvidence=r;
+ const target=r.target;const p=document.createElement('p');p.textContent=target?`${target.series||'اسم غير محدد'} | الجزء: ${target.season||'غير محدد'} | الحلقة: ${target.episode||'غير محددة'} | ${target.message||''}`:r.message;box.appendChild(p);
+ if(r.message){const note=document.createElement('p');note.textContent=r.message;box.appendChild(note);}
+ for(const item of r.items||[]){const row=document.createElement('p');const a=document.createElement('a');a.href=item.url;a.target='_blank';a.rel='noopener';a.textContent=item.title;row.appendChild(a);const status=document.createElement('span');status.textContent=item.identityStatus==='title_candidate'?' | تطابق عنوان مبدئي فقط، الحقوق والصورة غير متحققين':' | تطابق الحلقة غير مثبت، لا تستخدم تلقائيًا';row.appendChild(status);box.appendChild(row);}
+ if(r.items&&!r.items.length){const note=document.createElement('p');note.textContent='مفيش نتيجة في الأرشيف المحدود ده. لم يتم تحميل صور أو فيديو، ولم نستبدل الحلقة.';box.appendChild(note);}
+}
 function initRecapControls(){
+ for(const [id,route] of [['parseEpisodeBtn','parse'],['discoverEpisodeBtn','discover']])$(id).onclick=async()=>{
+  const button=$(id);button.disabled=true;$('episodeEvidence').textContent='جاري فحص الطلب'+(route==='discover'?' والبحث في بيانات الأرشيف العام':'')+'...';
+  try{const r=await api('/api/episode/'+route,{method:'POST',body:JSON.stringify({prompt:$('episodePrompt').value})});showEpisodeEvidence(r);}
+  catch(e){$('episodeEvidence').textContent=e.message;}finally{button.disabled=false;}
+ };
+
  $('renderMode').onchange=applyRecapMode;
  $('exportProjectJson').onclick=()=>{
   const data={...projectPayload(),script:$('scriptInput').value};const blob=new Blob([JSON.stringify({name:state.projectName||'recap',data},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='recap-project.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);

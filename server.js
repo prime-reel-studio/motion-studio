@@ -10,6 +10,7 @@ const voiceover = require('./lib/voiceover');
 const stock = require('./lib/stock');
 const commons = require('./lib/commons');
 const recap = require('./lib/recap');
+const episode = require('./lib/episode');
 
 const ROOT = __dirname;
 const dirs = {
@@ -68,7 +69,7 @@ app.post('/api/login', (req, res) => {
   }
   res.status(401).json({ ok: false, message: 'wrong passcode' });
 });
-app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'recap-v10-local-media' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'recap-v12-episode-evidence' }));
 // Everything else under /api, and all user content, requires the gate.
 app.use((req, res, next) => {
   const p = req.path;
@@ -122,6 +123,14 @@ app.get('/api/config', (_req, res) => {
   });
 });
 
+// ---------- bounded exact-episode request intake ----------
+app.post('/api/episode/parse',(req,res)=>{try{res.json({ok:true,target:episode.parse(req.body.prompt)});}catch(e){res.status(422).json({ok:false,message:e.message});}});
+let episodeSearchActive=false;
+app.post('/api/episode/discover',async(req,res)=>{
+ if(episodeSearchActive)return res.status(429).json({ok:false,message:'بحث مصادر قيد التنفيذ. استنى النتيجة الحالية.'});
+ try{episodeSearchActive=true;const target=episode.parse(req.body.prompt);res.json({ok:true,...await episode.discover(target)});}
+ catch(e){res.status(422).json({ok:false,message:e.message});}finally{episodeSearchActive=false;}
+});
 // ---------- script breakdown ----------
 app.post('/api/breakdown', (req, res) => {
   const scenes = breakdown(req.body.script || '');

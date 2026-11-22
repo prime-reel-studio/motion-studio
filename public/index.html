@@ -49,6 +49,10 @@
 <section class="panel" style="margin:16px;max-width:100%" id="recapPanel">
   <h2>استوديو ملخصات المسلسلات</h2>
   <p class="hint">نفس اتجاه الصور الكبيرة والتعليق القصصي. ده مسار مونتاج من ملفات ترفعها، مش سحب تلقائي لأي حلقة.</p>
+  <label class="lbl" for="episodePrompt">طلب الملخص</label>
+  <textarea id="episodePrompt" maxlength="500" placeholder="اعملي ملخص لمسلسل... الجزء... الحلقة..."></textarea>
+  <div class="row"><button id="parseEpisodeBtn" class="primary">افهم الطلب</button><button id="discoverEpisodeBtn" class="ghost">بحث تجريبي عن مصادر الحلقة</button></div>
+  <div id="episodeEvidence" class="hint" aria-live="polite">استخراج الطلب والبحث العام متاحان. لا كتابة أو صوت أو جلب مشاهد تلقائيًا من هذا الزر. النتائج تحتاج مطابقة الحلقة ومراجعة الحقوق.</div>
   <label class="lbl" for="renderMode">مسار التصدير</label>
   <select id="renderMode"><option value="motion">موشن جرافيك</option><option value="recap">ملخص سينمائي 16:9 من ملفاتك</option></select>
   <label class="lbl" for="episodeLabel">اسم المسلسل والجزء والحلقة</label><input id="episodeLabel" placeholder="مثال: المداح ٦ | الحلقة ٣٠" />
@@ -146,7 +150,7 @@
 </main>
 
 <script src="i18n.js?v=4"></script>
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
