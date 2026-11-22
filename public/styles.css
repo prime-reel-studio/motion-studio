@@ -251,3 +251,6 @@ button.mini {background:#1d1d28;border:1px solid var(--border);color:var(--text)
   .top-actions select {grid-column:1/-1;}
   .top-actions button.ghost {padding:8px;min-height:44px;}
 }
+
+.stock-picker input {background:#0e0e14;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px;font:inherit;}
+.stock-result a,.scene-body > a {color:var(--muted);overflow-wrap:anywhere;}

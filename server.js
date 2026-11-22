@@ -100,6 +100,7 @@ const upload = multer({
 });
 
 const jobs = new Map();
+let renderQueue = Promise.resolve();
 
 // ---------- config ----------
 app.get('/api/config', (_req, res) => {
@@ -313,7 +314,11 @@ app.post('/api/render', (req, res) => {
   const id = 'job-' + crypto.randomBytes(4).toString('hex');
   const job = { id, status: 'running', progress: 0, message: 'starting', outName: null, error: null };
   jobs.set(id, job);
-  renderProject(JSON.parse(JSON.stringify(project)), job, dirs)
+  const frozenProject = JSON.parse(JSON.stringify(project));
+  job.message = 'waiting for render slot';
+  const operation = renderQueue.then(() => renderProject(frozenProject, job, dirs));
+  renderQueue = operation.catch(() => {});
+  operation
     .then(({ outName, duration }) => {
       job.status = 'done';
       job.outName = outName;
