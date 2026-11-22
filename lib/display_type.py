@@ -14,6 +14,8 @@ words = re.findall(r'\S+', cfg.get('text', ''))
 font_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'fonts', 'NotoSansArabic-Black.ttf')
 rtl = bool(re.search('[\u0600-\u08ff]', cfg.get('text', '')))
 RAQM = ImageFont.Layout.RAQM if hasattr(ImageFont, 'Layout') else ImageFont.LAYOUT_RAQM
+latin_font = os.path.join(os.path.dirname(font_path), 'DejaVuSans-Bold.ttf')
+if not rtl: font_path = latin_font
 opts = {'direction': 'rtl' if rtl else 'ltr', 'language': 'ar' if rtl else 'en'}
 idx = int(cfg.get('index', 0))
 layout = idx % 3
@@ -81,7 +83,7 @@ for gi, group in enumerate(groups):
 credit = cfg.get('credit') or {}
 if credit.get('provider') == 'Wikimedia Commons':
     # Persistent attribution survives posting, alongside the downloadable full credits.
-    font = ImageFont.truetype(font_path, max(22, round(W*.029)), layout_engine=RAQM)
+    font = ImageFont.truetype(latin_font, max(22, round(W*.030)), layout_engine=RAQM)
     lines = textwrap.wrap('Photo: ' + credit.get('author',''), width=46)[:3]
     lines += [credit.get('license','') + ' | cropped & animated', credit.get('licenseUrl','').replace('https://','').replace('http://','')]
     lh = round(W*.044)

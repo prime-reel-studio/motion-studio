@@ -190,7 +190,7 @@ function sceneCard(s, i) {
   if (s.credit) {
     const credit = document.createElement('a');
     credit.href = s.credit.source; credit.target = '_blank'; credit.rel = 'noopener';
-    credit.textContent = (s.credit.provider || 'Pixabay') + ' · ' + (s.credit.author || 'المصدر');
+    credit.textContent = (s.credit.provider || 'Pixabay') + (s.credit.provider==='Wikimedia Commons'?(s.credit.kind==='video'?' · فيديو':' · صورة متحركة'):'') + ' · ' + (s.credit.author || 'المصدر');
     credit.className = 'hint'; body.appendChild(credit);
   }
   card.appendChild(thumb);
@@ -589,7 +589,7 @@ async function searchSceneStock(s, body) {
     try {
       const r=await api('/api/stock/search',{method:'POST',body:JSON.stringify({text:s.text,query:input.value,kind:type.value==='commons'?'image':type.value,provider:type.value==='commons'?'commons':'pixabay',aspect:state.aspect})});
       input.value=r.query; s.stockQuery=r.query;
-      status.textContent=r.items.length ? 'اختار لقطة وراجع ملاءمتها وحقوق الأشخاص والعلامات. صور Commons عليها اسم المصور والرخصة في الرندر.' : 'مفيش لقطة مناسبة وواضحة. ارفع ميديا للمشهد أو عدّل البحث.';
+      status.textContent=r.items.length ? (r.fallback==='image'?'مفيش فيديو مرخص مناسب، دي صور تتحرك في الرندر. ':'')+'اختار لقطة وراجع ملاءمتها وحقوق الأشخاص والعلامات. صور Commons عليها اسم المصور والرخصة في الرندر.' : 'مفيش لقطة مناسبة وواضحة. ارفع ميديا للمشهد أو عدّل البحث.';
       for(const item of r.items){
         const wrap=document.createElement('div'); wrap.className='stock-result';
         const img=document.createElement('img'); img.src=item.preview; img.loading='lazy'; img.alt=item.tags || '';

@@ -67,7 +67,7 @@ app.post('/api/login', (req, res) => {
   }
   res.status(401).json({ ok: false, message: 'wrong passcode' });
 });
-app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v4-commons' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v5-commons-video' }));
 // Everything else under /api, and all user content, requires the gate.
 app.use((req, res, next) => {
   const p = req.path;
@@ -184,7 +184,8 @@ app.post('/api/stock/search', async (req, res) => {
     const entity = commons.entity(req.body.text) || commons.entity(req.body.query);
     if (entity || req.body.provider === 'commons') {
       const query = entity || req.body.query || req.body.text;
-      return res.json({ok:true,query,provider:'Wikimedia Commons',items:await commons.search(query)});
+      const result = req.body.kind === 'image' ? {items:await commons.search(query,'image'),fallback:false} : await commons.forEntity(query);
+      return res.json({ok:true,query,provider:'Wikimedia Commons',...result});
     }
     const query = req.body.query || stock.suggest(req.body.text);
     if (!query) return res.status(422).json({ok:false,message:'اكتب كلمات بحث بالإنجليزي للمشهد ده'});
