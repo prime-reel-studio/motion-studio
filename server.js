@@ -216,16 +216,31 @@ app.post('/api/thumbnail', async (req, res) => {
   const outThumb = safe.replace(/\.mp4$/i, '') + '-thumb.jpg';
   const outPath = path.join(dirs.renders, outThumb);
   try {
-    const { makeSceneASS } = require('./lib/ass');
     const W = 1080, H = 1920;
-    const ass = makeSceneASS({ text: (title || '').slice(0, 60), duration: 2 }, 'sports', W, H, true);
+    // Dedicated thumbnail title: top-third, static (no karaoke/fade), boxed, Noto Naskh Arabic (shapes via libass).
+    const cleanTitle = String(title || '').slice(0, 60).replace(/[{}\\]/g, '');
+    const ass = `[Script Info]
+ScriptType: v4.00+
+PlayResX: ${W}
+PlayResY: ${H}
+ScaledBorderAndShadow: yes
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: T, Noto Naskh Arabic, 120, &H00008CFF, &H00FFFFFF, &H64000000, &HA0060608, 1, 0, 0, 0, 100, 100, 1, 0, 3, 26, 0, 8, 70, 70, 300, 1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:05.00,T,,0,0,0,,${cleanTitle}
+`;
     const assPath = path.join(dirs.tmp, 'thumb_' + Date.now() + '.ass');
     fs.writeFileSync(assPath, ass, 'utf8');
     const esc = assPath.replace(/'/g, "'\\''").replace(/:/g, '\\:');
     await new Promise((resolve, reject) => {
       const { spawn } = require('child_process');
       const p = spawn('ffmpeg', ['-y', '-loglevel', 'error',
-        '-ss', '0.8', '-i', src,
+        '-i', src, '-ss', '0.8',
         '-vf', "scale=" + W + ":" + H + ":force_original_aspect_ratio=increase,crop=" + W + ":" + H + ",eq=brightness=-0.06,subtitles='" + esc + "'",
         '-frames:v', '1', '-q:v', '3', outPath]);
       let err = '';

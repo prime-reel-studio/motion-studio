@@ -32,6 +32,10 @@
   </div>
 </header>
 
+<section id="tplGallery" class="tpl-gallery">
+  <h2 class="tpl-heading" data-i18n="templates">قوالب جاهزة</h2>
+  <div id="tplRow" class="tpl-row"></div>
+</section>
 <main class="layout">
   <!-- LEFT: script + voiceover -->
   <section class="col">
@@ -73,6 +77,11 @@
     <div class="panel grow">
       <h2><span class="step">4</span><span data-i18n="scenes">المشاهد</span> <span id="sceneCount" class="count"></span></h2>
       <div id="sceneList" class="scene-list"></div>
+      <div id="timelineWrap" class="timeline-wrap" style="display:none">
+        <div class="tl-label"><span data-i18n="timeline">التايم لاين</span> <span id="tlTotal" class="count"></span></div>
+        <div id="timelineStrip" class="timeline"></div>
+        <div class="tl-hint hint" data-i18n="timelineHint">عرض كل مشهد حسب مدته — اضغط على مشهد للانتقال له</div>
+      </div>
     </div>
   </section>
 

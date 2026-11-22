@@ -44,6 +44,7 @@ function projectPayload() {
 /* ---------- config & init ---------- */
 async function init() {
   applyI18n();
+  buildTemplates();
   state.config = await api('/api/config');
   buildVoiceSelect();
   buildMusicSelect();
@@ -107,6 +108,7 @@ function renderScenes() {
   $('sceneCount').textContent = state.scenes.length ? `(${state.scenes.length})` : '';
   list.innerHTML = '';
   state.scenes.forEach((s, i) => list.appendChild(sceneCard(s, i)));
+  renderTimeline();
 }
 
 function sceneCard(s, i) {
@@ -230,7 +232,7 @@ function bindEvents() {
   $('langToggle').onclick = () => {
     LANG = LANG === 'ar' ? 'en' : 'ar';
     localStorage.setItem('rs-lang', LANG);
-    applyI18n(); buildPresetRow(); buildAspectRow(); buildMusicSelect(); updateKeyPill(); renderScenes();
+    applyI18n(); buildTemplates(); buildPresetRow(); buildAspectRow(); buildMusicSelect(); updateKeyPill(); renderScenes();
   };
 
   $('breakdownBtn').onclick = async () => {
@@ -385,7 +387,7 @@ async function loadPublishExtras(job) {
     const r2 = await fetch('/api/thumbnail', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: job.id, title: job.title || (lastRenderForm && lastRenderForm.title) || '' })
+      body: JSON.stringify({ outName: job.outName || (job.url || '').split('/').pop(), title: job.title || (lastRenderForm && lastRenderForm.title) || '' })
     });
     const d2 = await r2.json();
     if (d2 && d2.url) {
@@ -407,3 +409,77 @@ $('copyCaption').addEventListener('click', async () => {
     document.execCommand('copy');
   }
 });
+
+// ---------- timeline view ----------
+const TL_COLORS = ['#d3ad37', '#7ec8e3', '#9be37e', '#e37e9b', '#b79be3', '#e3a97e', '#7ee3c8'];
+function renderTimeline() {
+  const wrap = $('timelineWrap');
+  const strip = $('timelineStrip');
+  if (!wrap || !strip) return;
+  strip.innerHTML = '';
+  if (!state.scenes.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const total = state.scenes.reduce((a, s) => a + (parseFloat(s.duration) || 0), 0);
+  $('tlTotal').textContent = `(${total.toFixed(1)} ${t('sec') || 'ث'})`;
+  state.scenes.forEach((sc, i) => {
+    const dur = parseFloat(sc.duration) || 0;
+    const b = document.createElement('div');
+    b.className = 'tl-block';
+    b.style.background = TL_COLORS[i % TL_COLORS.length];
+    b.style.width = Math.max(44, Math.min(220, dur * 26)) + 'px';
+    b.innerHTML = `<span class="tl-idx">${i + 1}</span><span class="tl-dur">${dur.toFixed(1)}s</span>`;
+    b.onclick = () => {
+      const cards = document.querySelectorAll('#sceneList .scene-card, #sceneList > *');
+      const target = cards[i];
+      if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); target.style.outline = '2px solid #d3ad37'; setTimeout(() => { target.style.outline = ''; }, 1500); }
+    };
+    strip.appendChild(b);
+  });
+}
+
+// ---------- template gallery ----------
+const TEMPLATES = [
+  { id: 'matchday', emoji: '⚽', ar: 'إعلان ماتش', en: 'Matchday', desc_ar: 'إعلان ماتش جاي بتاريخ وملعب', desc_en: 'Upcoming match announcement', gradient: 'linear-gradient(135deg,#1a1a1f,#3a2f10)', preset: 'sports', aspect: '9:16', music: 'Upbeat Forever.mp3',
+    script: 'يوم الماتش وصل!\nبرايم أكاديمي ضد المنافس القادم\nالجمعة الساعة 4 عصرًا — الملعب الرئيسي\nتعالوا شجعوا أبطالنا' },
+  { id: 'highlights', emoji: '🔥', ar: 'لقطات الماتش', en: 'Highlights', desc_ar: 'أجمل لقطات من آخر ماتش', desc_en: 'Best moments from the last match', gradient: 'linear-gradient(135deg,#101016,#5a1010)', preset: 'cinematic', aspect: '9:16', music: 'Inspired.mp3',
+    script: 'لقطات ما تتنسيش من الماتش الأخير\nمهارات وأهداف بمستوى تاني\nبرايم أكاديمي — حيث يولد الأبطال' },
+  { id: 'goal', emoji: '🥅', ar: 'جول الأسبوع', en: 'Goal of the week', desc_ar: 'أحلى جول في الأسبوع', desc_en: 'Best goal this week', gradient: 'linear-gradient(135deg,#0c1a0c,#2f5a10)', preset: 'sports', aspect: '9:16', music: 'Upbeat Forever.mp3',
+    script: 'جول الأسبوع من برايم أكاديمي\nتسديدة ما تتصدش!\nشوف الإبداع بنفسك' },
+  { id: 'player', emoji: '⭐', ar: 'تقديم لاعب', en: 'Player intro', desc_ar: 'قدّم لاعب جديد أو نجم الأسبوع', desc_en: 'Introduce a player', gradient: 'linear-gradient(135deg,#141420,#3a2f10)', preset: 'club', aspect: '9:16', music: 'Deliberate Thought.mp3',
+    script: 'نجمنا الصاعد\nموهبة من برايم أكاديمي\nالمستقبل بيبدأ من هنا' },
+  { id: 'training', emoji: '💪', ar: 'تدريبات', en: 'Training', desc_ar: 'لقطات من التدريب اليومي', desc_en: 'Training montage', gradient: 'linear-gradient(135deg,#101820,#1f3a5a)', preset: 'minimal', aspect: '9:16', music: 'Wholesome.mp3',
+    script: 'شغل كل يوم\nالتفاصيل الصغيرة بتفرق\nبرايم أكاديمي — انضباط وشغف' },
+  { id: 'promo', emoji: '🏆', ar: 'اشترك الآن', en: 'Join us', desc_ar: 'دعوة للاشتراك في الأكاديمية', desc_en: 'Academy sign-up promo', gradient: 'linear-gradient(135deg,#1a1408,#6a5410)', preset: 'club', aspect: '9:16', music: 'Inspired.mp3',
+    script: 'ابنك عنده موهبة؟\nبرايم أكاديمي بتستقبل لاعبين جدد\nاحجز مكانك دلوقتي — الأماكن محدودة' },
+];
+
+function buildTemplates() {
+  const row = $('tplRow');
+  if (!row) return;
+  row.innerHTML = '';
+  const isAr = (document.documentElement.lang || 'ar') === 'ar';
+  TEMPLATES.forEach((tp) => {
+    const c = document.createElement('div');
+    c.className = 'tpl-card';
+    c.style.background = tp.gradient;
+    c.innerHTML = `<span class="tpl-emoji">${tp.emoji}</span><span class="tpl-name">${isAr ? tp.ar : tp.en}</span><span class="tpl-desc">${isAr ? tp.desc_ar : tp.desc_en}</span><span class="tpl-meta">${tp.aspect} · ${tp.preset}</span>`;
+    c.onclick = () => applyTemplate(tp);
+    row.appendChild(c);
+  });
+}
+
+async function applyTemplate(tp) {
+  $('scriptInput').value = tp.script.replace(/\\n/g, '\n');
+  state.preset = tp.preset;
+  state.aspect = tp.aspect;
+  buildPresetRow(); buildAspectRow();
+  const sel = $('musicSelect');
+  if (sel) {
+    const opt = [...sel.options].find(o => o.value === tp.music);
+    if (opt) { sel.value = tp.music; state.musicTrack = tp.music; }
+  }
+  state.projectName = tp.ar;
+  window.scrollTo({ top: document.querySelector('.layout').offsetTop - 10, behavior: 'smooth' });
+  // auto-breakdown so scenes appear immediately
+  try { $('breakdownBtn').click(); } catch (e) { /* user can click */ }
+}

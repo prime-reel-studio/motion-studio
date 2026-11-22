@@ -188,3 +188,33 @@ video { width: 100%; border-radius: 10px; margin-top: 14px; background: #000; }
 .publish-box { margin-top: 14px; border: 1px solid #2a2a33; border-radius: 12px; padding: 14px; background: #131318; display: flex; flex-direction: column; gap: 8px; }
 #captionSugg { background: #0e0e12; color: #f2ead3; border: 1px solid #33333d; border-radius: 8px; padding: 10px; font-size: 14px; line-height: 1.7; resize: vertical; font-family: inherit; }
 #thumbPreview { width: 140px; border-radius: 8px; border: 1px solid #33333d; }
+
+/* template gallery */
+.tpl-gallery { padding: 4px 18px 10px; }
+.tpl-heading { font-size: 15px; margin: 6px 0 10px; color: #d3ad37; }
+.tpl-row { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+.tpl-card { min-width: 150px; max-width: 150px; border-radius: 12px; padding: 14px 12px; cursor: pointer; scroll-snap-align: start; border: 1px solid #33333d; color: #fff; display: flex; flex-direction: column; gap: 6px; transition: transform .15s, border-color .15s; }
+.tpl-card:hover { transform: translateY(-3px); border-color: #d3ad37; }
+.tpl-card .tpl-emoji { font-size: 26px; }
+.tpl-card .tpl-name { font-weight: 700; font-size: 13px; }
+.tpl-card .tpl-desc { font-size: 11px; opacity: .8; line-height: 1.5; }
+.tpl-card .tpl-meta { font-size: 10px; opacity: .65; margin-top: auto; }
+
+/* timeline */
+.timeline-wrap { margin-top: 12px; border-top: 1px solid #26262e; padding-top: 10px; }
+.tl-label { font-size: 12px; color: #9a9aa5; margin-bottom: 6px; }
+.timeline { display: flex; gap: 3px; overflow-x: auto; padding: 4px 0; min-height: 44px; }
+.tl-block { min-width: 44px; height: 40px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #0c0c0e; font-size: 11px; font-weight: 700; cursor: pointer; flex-shrink: 0; padding: 0 4px; transition: filter .12s; }
+.tl-block:hover { filter: brightness(1.2); }
+.tl-block .tl-idx { font-size: 12px; }
+.tl-block .tl-dur { font-size: 9px; font-weight: 500; opacity: .75; }
+.tl-hint { margin-top: 4px; }
+
+/* preview-first on mobile: export/preview column right after script */
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+  .layout .col:nth-child(1) { order: 1; }
+  .layout .col:nth-child(3) { order: 2; }
+  .layout .col.wide { order: 3; }
+  .tpl-row { padding-bottom: 4px; }
+}
