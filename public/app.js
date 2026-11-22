@@ -137,9 +137,10 @@ function sceneCard(s, i) {
   const card = document.createElement('div');
   card.className = 'scene-card';
 
-  const thumb = document.createElement(s.previewUrl ? 'img' : 'div');
-  if (s.previewUrl) {
-    thumb.src = s.previewUrl;
+  const mediaThumb = state.media.find(m => m.name === s.media)?.thumb;
+  const thumb = document.createElement(s.previewUrl || mediaThumb ? 'img' : 'div');
+  if (s.previewUrl || mediaThumb) {
+    thumb.src = s.previewUrl || mediaThumb;
     thumb.className = 'scene-thumb';
   } else {
     thumb.className = 'scene-thumb-empty';

@@ -177,10 +177,6 @@ app.delete('/api/media/:name', (req, res) => {
 });
 
 // ---------- legal stock ----------
-app.post('/api/settings/stock', (req, res) => {
-  try { stock.configure(req.body.pixabay); res.json({ok:true}); }
-  catch (_) { res.status(400).json({ok:false,message:'Invalid stock configuration'}); }
-});
 app.post('/api/stock/search', async (req, res) => {
   try {
     const query = req.body.query || stock.suggest(req.body.text);
