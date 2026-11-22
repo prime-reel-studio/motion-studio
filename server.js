@@ -13,11 +13,12 @@ const recap = require('./lib/recap');
 const episode = require('./lib/episode');
 
 const ROOT = __dirname;
+const DATA_ROOT = process.env.STUDIO_DATA_DIR ? path.resolve(process.env.STUDIO_DATA_DIR) : ROOT;
 const dirs = {
-  uploads: path.join(ROOT, 'uploads'),
-  renders: path.join(ROOT, 'renders'),
-  tmp: path.join(ROOT, 'tmp'),
-  projects: path.join(ROOT, 'projects'),
+  uploads: path.join(DATA_ROOT, 'uploads'),
+  renders: path.join(DATA_ROOT, 'renders'),
+  tmp: path.join(DATA_ROOT, 'tmp'),
+  projects: path.join(DATA_ROOT, 'projects'),
   music: path.join(ROOT, 'assets', 'music'),
   sfx: path.join(ROOT, 'assets', 'sfx'),
 };
