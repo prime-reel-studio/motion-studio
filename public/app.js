@@ -364,7 +364,21 @@ async function loadProject(name) {
   buildPresetRow(); buildAspectRow(); renderScenes();
 }
 
-init().catch((e) => console.error(e));
+init().catch((e) => { console.error(e); showFatalHint(e); });
+
+// Safety net: if init raced the DOM or an await hung, guarantee the gallery + core UI build.
+document.addEventListener('DOMContentLoaded', () => setTimeout(ensureBuilt, 300));
+window.addEventListener('load', () => setTimeout(ensureBuilt, 800));
+function ensureBuilt() {
+  try {
+    if ($('tplRow') && !$('tplRow').children.length) buildTemplates();
+    if ($('presetRow') && !$('presetRow').children.length && state.config) { buildPresetRow(); buildAspectRow(); buildMusicSelect(); }
+  } catch (e) { console.error('ensureBuilt', e); }
+}
+function showFatalHint(e) {
+  const el = $('renderMsg');
+  if (el) el.textContent = 'حصل خطأ في التحميل — حدّث الصفحة. (' + (e && e.message ? e.message : e) + ')';
+}
 
 // ---------- publish extras: caption suggestion + thumbnail ----------
 async function loadPublishExtras(job) {
