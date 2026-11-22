@@ -165,6 +165,80 @@ app.post('/api/preview-scene', async (req, res) => {
   }
 });
 
+
+// ---------- caption suggestion ----------
+function ruleBasedCaption(title, texts) {
+  const hook = (texts.find((t) => t && t.trim()) || title || '').trim();
+  const all = texts.join(' ');
+  const tags = ['#برايم_اكاديمي'];
+  const map = [
+    [/ماتش|مباراة|فوز|هدف|جون/i, ['#كورة', '#مباراة', '#اهداف']],
+    [/تدريب|تمرين/i, ['#تدريب', '#كورة_قعدات']],
+    [/موهبة|مواهب|لاعب/i, ['#مواهب', '#نجوم_المستقبل']],
+    [/بطولة|دوري/i, ['#بطولة', '#دوري']],
+    [/حراسة|حارس/i, ['#حراسة_المرمى']],
+  ];
+  for (const [re, arr] of map) if (re.test(all)) tags.push(...arr);
+  tags.push('#اكاديمية_كرة', '#مصر');
+  const uniq = [...new Set(tags)].slice(0, 8);
+  const caption = (hook ? hook + '\n\n' : '') + 'تابعونا لسه في كتير جاي ⚽🔥\n\n' + uniq.join(' ');
+  return caption;
+}
+
+app.post('/api/suggest-caption', async (req, res) => {
+  const { title, texts, lang } = req.body || {};
+  const list = Array.isArray(texts) ? texts : [];
+  const key = (process.env.GEMINI_API_KEY || '').trim();
+  if (key) {
+    try {
+      const prompt = 'اكتب كابشن جاهز للنشر على فيسبوك/انستجرام/تيك توك لفيديو قصير بالمحتوى ده. باللهجة المصرية، سطرين جذابين + إيموجي مناسب + سطر هاشتاجات (حتى 8). من غير مقدمات. المحتوى:\n' + list.filter(Boolean).join('\n');
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(key), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      });
+      const j = await r.json();
+      const text = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts.map((p) => p.text).join('');
+      if (text) return res.json({ ok: true, caption: text.trim(), ai: true });
+      throw new Error('bad gemini response');
+    } catch (e) {
+      return res.json({ ok: true, caption: ruleBasedCaption(title, list), ai: false, fallback: true });
+    }
+  }
+  res.json({ ok: true, caption: ruleBasedCaption(title, list), ai: false });
+});
+
+// ---------- thumbnail ----------
+app.post('/api/thumbnail', async (req, res) => {
+  const { outName, title } = req.body || {};
+  const safe = path.basename(outName || '');
+  const src = path.join(dirs.renders, safe);
+  if (!safe || !fs.existsSync(src)) return res.status(404).json({ ok: false, message: 'render not found' });
+  const outThumb = safe.replace(/\.mp4$/i, '') + '-thumb.jpg';
+  const outPath = path.join(dirs.renders, outThumb);
+  try {
+    const { makeSceneASS } = require('./lib/ass');
+    const W = 1080, H = 1920;
+    const ass = makeSceneASS({ text: (title || '').slice(0, 60), duration: 2 }, 'sports', W, H, true);
+    const assPath = path.join(dirs.tmp, 'thumb_' + Date.now() + '.ass');
+    fs.writeFileSync(assPath, ass, 'utf8');
+    const esc = assPath.replace(/'/g, "'\\''").replace(/:/g, '\\:');
+    await new Promise((resolve, reject) => {
+      const { spawn } = require('child_process');
+      const p = spawn('ffmpeg', ['-y', '-loglevel', 'error',
+        '-ss', '0.8', '-i', src,
+        '-vf', "scale=" + W + ":" + H + ":force_original_aspect_ratio=increase,crop=" + W + ":" + H + ",eq=brightness=-0.06,subtitles='" + esc + "'",
+        '-frames:v', '1', '-q:v', '3', outPath]);
+      let err = '';
+      p.stderr.on('data', (d) => (err += d));
+      p.on('close', (c) => (c === 0 ? resolve() : reject(new Error(err || 'ffmpeg ' + c))));
+      p.on('error', reject);
+    });
+    res.json({ ok: true, url: '/renders/' + outThumb, name: outThumb });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: String(e.message || e) });
+  }
+});
+
 // ---------- render ----------
 app.post('/api/render', (req, res) => {
   const project = req.body.project;

@@ -96,6 +96,17 @@
       <div id="renderMsg" class="hint"></div>
       <video id="resultVideo" controls playsinline style="display:none"></video>
       <a id="downloadLink" class="primary big" style="display:none" data-i18n="download">تحميل MP4</a>
+      <div id="publishBox" class="publish-box" style="display:none">
+        <label class="lbl" data-i18n="captionSugg">كابشن جاهز للنشر</label>
+        <textarea id="captionSugg" rows="5" readonly></textarea>
+        <div class="row">
+          <button id="copyCaption" class="ghost" data-i18n="copyCaption">نسخ الكابشن</button>
+        </div>
+        <div id="captionAiNote" class="hint"></div>
+        <label class="lbl" data-i18n="thumbTitle">صورة الغلاف</label>
+        <img id="thumbPreview" style="display:none" alt="thumbnail" />
+        <a id="thumbLink" class="ghost big" style="display:none" data-i18n="downloadThumb">تحميل الغلاف</a>
+      </div>
     </div>
   </section>
 </main>

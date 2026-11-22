@@ -1,3 +1,4 @@
+let lastRenderForm = null;
 /* Reel Studio frontend */
 const state = {
   config: null,
@@ -295,7 +296,9 @@ async function startRender() {
   $('resultVideo').style.display = 'none';
   $('downloadLink').style.display = 'none';
   try {
-    const { jobId } = await api('/api/render', { method: 'POST', body: JSON.stringify({ project: projectPayload() }) });
+    const proj = projectPayload();
+    lastRenderForm = { title: proj.title || '', style: proj.preset || '' };
+    const { jobId } = await api('/api/render', { method: 'POST', body: JSON.stringify({ project: proj }) });
     pollJob(jobId);
   } catch (e) {
     $('renderMsg').textContent = t('error') + ': ' + e.message;
@@ -314,6 +317,7 @@ async function pollJob(jobId) {
     $('downloadLink').href = job.url;
     $('downloadLink').download = job.outName;
     $('downloadLink').style.display = 'block';
+    loadPublishExtras(job);
     $('renderBtn').disabled = false;
     return;
   }
@@ -359,3 +363,47 @@ async function loadProject(name) {
 }
 
 init().catch((e) => console.error(e));
+
+// ---------- publish extras: caption suggestion + thumbnail ----------
+async function loadPublishExtras(job) {
+  const box = $('publishBox');
+  if (!box) return;
+  box.style.display = 'flex';
+  try {
+    const r = await fetch('/api/suggest-caption', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: job.title || (lastRenderForm && lastRenderForm.title) || '', style: (lastRenderForm && lastRenderForm.style) || '', outName: job.outName })
+    });
+    const d = await r.json();
+    if (d && d.caption) {
+      $('captionSugg').value = d.caption;
+      $('captionAiNote').textContent = d.ai ? '✨ AI' : 'ℹ️ قاعدة جاهزة (فعّل مفتاح Gemini لكابشن بالذكاء الاصطناعي)';
+    }
+  } catch (e) { console.warn('caption suggest failed', e); }
+  try {
+    const r2 = await fetch('/api/thumbnail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id, title: job.title || (lastRenderForm && lastRenderForm.title) || '' })
+    });
+    const d2 = await r2.json();
+    if (d2 && d2.url) {
+      const img = $('thumbPreview');
+      img.src = d2.url; img.style.display = 'block';
+      const a = $('thumbLink');
+      a.href = d2.url; a.download = d2.name || 'thumbnail.jpg'; a.style.display = 'inline-block';
+    }
+  } catch (e) { console.warn('thumbnail failed', e); }
+}
+
+$('copyCaption').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('captionSugg').value);
+    $('copyCaption').textContent = t('captionCopied');
+    setTimeout(() => { $('copyCaption').textContent = t('copyCaption'); }, 2000);
+  } catch (e) {
+    $('captionSugg').select();
+    document.execCommand('copy');
+  }
+});
