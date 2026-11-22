@@ -54,24 +54,18 @@ async function fetchConfigWithRetry() {
 }
 
 async function init() {
-  window.__initStage = 'start';
   applyI18n();
   buildTemplates();
-  window.__initStage = 'pre-config';
   state.config = await fetchConfigWithRetry();
-  window.__initStage = 'config';
   buildVoiceSelect();
   buildMusicSelect();
   buildPresetRow();
   buildAspectRow();
   updateKeyPill();
-  window.__initStage = 'rows';
   bindEvents();
-  window.__initStage = 'bound';
   await refreshMedia();
   await refreshProjects();
   renderScenes();
-  window.__initStage = 'done';
 }
 
 function updateKeyPill() {
@@ -381,18 +375,6 @@ async function loadProject(name) {
   buildPresetRow(); buildAspectRow(); renderScenes();
 }
 
-init().catch((e) => { console.error(e); showFatalHint(e); });
-
-// Safety net: if init raced the DOM or an await hung, guarantee the gallery + core UI build.
-document.addEventListener('DOMContentLoaded', () => setTimeout(ensureBuilt, 300));
-window.addEventListener('load', () => setTimeout(ensureBuilt, 800));
-async function ensureBuilt() {
-  try {
-    if ($('tplRow') && !$('tplRow').children.length) buildTemplates();
-    if (!state.config) state.config = await fetchConfigWithRetry();
-    if ($('presetRow') && !$('presetRow').children.length) { buildVoiceSelect(); buildMusicSelect(); buildPresetRow(); buildAspectRow(); updateKeyPill(); }
-  } catch (e) { console.error('ensureBuilt', e); }
-}
 function showFatalHint(e) {
   const el = $('renderMsg');
   if (el) el.textContent = 'حصل خطأ في التحميل — حدّث الصفحة. (' + (e && e.message ? e.message : e) + ')';
@@ -515,3 +497,8 @@ async function applyTemplate(tp) {
   // auto-breakdown so scenes appear immediately
   try { $('breakdownBtn').click(); } catch (e) { /* user can click */ }
 }
+
+/* ---------- boot (must be last: const TEMPLATES/TL_COLORS above are TDZ until here) ---------- */
+init().catch((e) => { console.error(e); showFatalHint(e); });
+document.addEventListener('DOMContentLoaded', () => setTimeout(ensureBuilt, 300));
+window.addEventListener('load', () => setTimeout(ensureBuilt, 800));
