@@ -32,6 +32,8 @@ async function api(path, opts = {}) {
 function projectPayload() {
   return {
     title: state.projectName || 'reel',
+    renderMode: $('renderMode').value,
+    episodeLabel: $('episodeLabel').value,
     aspect: state.aspect,
     preset: state.preset,
     motionTheme: $('motionTheme').value,
@@ -39,9 +41,10 @@ function projectPayload() {
     musicVolume: $('musicVol').value / 100 * 0.8,
     sfxOn: $('sfxToggle').checked,
     voiceover: state.voiceover,
-    voiceoverStart: 0.25,
+    voiceoverStart: $('renderMode').value==='recap'?0:0.25,
     scenes: state.scenes.map((s) => ({
       id: s.id, text: s.text, duration: s.duration,
+      caption: s.caption, chapter: s.chapter, sourceUrl: s.sourceUrl, rightsNote: s.rightsNote, sourceCrop: s.sourceCrop,
       media: s.media, trimStart: s.trimStart, logoMode: s.logoMode, portraitCard: s.portraitCard, credit: s.credit, stockQuery: s.stockQuery, stockNotice: s.stockNotice,
     })),
   };
@@ -73,6 +76,7 @@ async function init() {
   updateKeyPill();
   bindEvents();
   $('autoStockBtn').onclick = autoStockScenes;
+  initRecapControls();
   $('stockStatus').textContent = state.config.stockKeySet ? 'Pixabay متصل. راجع الميديا والأشخاص والعلامات قبل النشر.' : 'خدمة الميديا لسه مش متصلة. الموشن جرافيك شغال بدونها.';
   await refreshMedia();
   await refreshProjects();
@@ -166,7 +170,12 @@ function sceneCard(s, i) {
       <button class="mini" data-a="up">↑</button>
       <button class="mini" data-a="down">↓</button>
       <button class="mini" data-a="del">✕</button>
-    </div>`;
+    </div>
+    <label class="lbl">عنوان قصير تحت الصورة</label><input data-f="caption" value="${escapeAttr(s.caption||'')}" placeholder="سيبه فاضي لاستخدام نص المشهد" />
+    <label class="lbl">مرحلة الحكاية</label><input data-f="chapter" value="${escapeAttr(s.chapter||'')}" placeholder="المواجهة / الفلاش باك / النجاة" />
+    <label class="lbl">رابط المصدر</label><input data-f="sourceUrl" value="${escapeAttr(s.sourceUrl||'')}" type="url" placeholder="https://..." />
+    <label class="lbl">ملاحظة الحقوق</label><input data-f="rightsNote" value="${escapeAttr(s.rightsNote||'')}" placeholder="الترخيص أو حالة الإذن، لا نفترض الترخيص" />`;
+  for(const field of ['caption','chapter','sourceUrl','rightsNote'])body.querySelector('[data-f="'+field+'"]').oninput=e=>s[field]=e.target.value;
 
   const mediaSel = body.querySelector('[data-f="media"]');
   mediaSel.innerHTML = `<option value="">${t('noMedia')}</option>` +
@@ -221,6 +230,8 @@ async function previewScene(s) {
   }
   renderScenes();
 }
+
+function escapeAttr(str) {return escapeHtml(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 function escapeHtml(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -397,6 +408,9 @@ async function loadProject(name) {
   state.projectName = n;
   state.scenes = data.scenes || [];
   state.preset = data.preset || 'cinematic';
+  $('renderMode').value=data.renderMode||'motion';
+  $('episodeLabel').value=data.episodeLabel||'';
+  applyRecapMode();
   $('motionTheme').value = data.motionTheme || 'random';
   state.aspect = data.aspect || '9:16';
   state.musicTrack = data.musicTrack;
@@ -625,4 +639,22 @@ async function autoStockScenes() {
   renderScenes();
   status.textContent=`تم اختيار ${done} مشهد من المصادر المرخصة. ${missed ? missed+' مشهد محتاج رفع ميديا أو بحث أدق، مش هنحط لقطة ملهاش علاقة. ' : ''}راجع الاختيارات قبل النشر.`;
   button.disabled=false;
+}
+
+function applyRecapMode(){
+ const recap=$('renderMode').value==='recap';
+ if(recap){state.aspect='16:9';$('autoStock').checked=false;$('autoStock').disabled=true;$('autoStockBtn').disabled=true;buildAspectRow();}
+ else {$('autoStock').disabled=false;$('autoStockBtn').disabled=false;}
+ $('recapCapability').textContent=recap?'تصدير ملخص أفقي من ملفاتك: كل مشهد محتاج ميديا وتعليق مرفوع. لا سحب تلقائي للحلقات، ولا تأليف أو أصوات متصلة حاليًا.':'مسار الموشن الحالي. مسار الملخص منفصل ولا يستبدل مشاهد المسلسلات بفيديوهات مخزون.';
+}
+function initRecapControls(){
+ $('renderMode').onchange=applyRecapMode;
+ $('exportProjectJson').onclick=()=>{
+  const data={...projectPayload(),script:$('scriptInput').value};const blob=new Blob([JSON.stringify({name:state.projectName||'recap',data},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='recap-project.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
+ };
+ $('importProjectJson').onchange=async e=>{try{
+  const file=e.target.files[0];if(!file)return;if(file.size>2*1024*1024)throw new Error('ملف المشروع أكبر من الحد');const j=JSON.parse(await file.text());const data=j.data||j;if(!Array.isArray(data.scenes))throw new Error('ملف مشروع غير صالح');
+  state.scenes=data.scenes;state.voiceover=data.voiceover||null;state.projectName=j.name||data.title||'recap';state.aspect=data.aspect||'16:9';state.preset=data.preset||'cinematic';$('scriptInput').value=data.script||'';$('renderMode').value=data.renderMode||'motion';$('episodeLabel').value=data.episodeLabel||'';applyRecapMode();buildAspectRow();renderScenes();
+  $('recapCapability').textContent='المشروع اتفتح. تأكد إن ملفات الميديا والتعليق الأصلية موجودة في المكتبة قبل الرندر.';
+ }catch(err){$('recapCapability').textContent=err.message;}};
 }

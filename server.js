@@ -9,6 +9,7 @@ const { renderProject, previewScene } = require('./lib/render');
 const voiceover = require('./lib/voiceover');
 const stock = require('./lib/stock');
 const commons = require('./lib/commons');
+const recap = require('./lib/recap');
 
 const ROOT = __dirname;
 const dirs = {
@@ -67,7 +68,7 @@ app.post('/api/login', (req, res) => {
   }
   res.status(401).json({ ok: false, message: 'wrong passcode' });
 });
-app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v9-safe-entrances' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'recap-v10-local-media' }));
 // Everything else under /api, and all user content, requires the gate.
 app.use((req, res, next) => {
   const p = req.path;
@@ -109,6 +110,9 @@ app.get('/api/config', (_req, res) => {
   const sfx = fs.readdirSync(dirs.sfx).filter((f) => /\.(mp3|wav)$/i.test(f));
   res.json({
     geminiKeySet: voiceover.keySet(),
+    recapReady: true,
+    episodeRetrievalReady: false,
+    promptScriptReady: false,
     stockKeySet: stock.keySet(),
     voices: voiceover.VOICES,
     music,
@@ -304,7 +308,7 @@ app.post('/api/render', (req, res) => {
   jobs.set(id, job);
   const frozenProject = JSON.parse(JSON.stringify(project));
   job.message = 'waiting for render slot';
-  const operation = renderQueue.then(() => renderProject(frozenProject, job, dirs));
+  const operation = renderQueue.then(() => frozenProject.renderMode === 'recap' ? recap.renderRecap(frozenProject, job, dirs) : renderProject(frozenProject, job, dirs));
   renderQueue = operation.catch(() => {});
   operation
     .then(({ outName, duration, creditsUrl }) => {

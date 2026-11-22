@@ -14,7 +14,7 @@
 <title>Prime Studio — استوديو الريلز</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=5" />
+<link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
 <div id="lockScreen" class="lock-screen" style="display:none">
@@ -45,6 +45,16 @@
 <section id="tplGallery" class="tpl-gallery">
   <h2 class="tpl-heading" data-i18n="templates">قوالب جاهزة</h2>
   <div id="tplRow" class="tpl-row"></div>
+</section>
+<section class="panel" style="margin:16px;max-width:100%" id="recapPanel">
+  <h2>استوديو ملخصات المسلسلات</h2>
+  <p class="hint">نفس اتجاه الصور الكبيرة والتعليق القصصي. ده مسار مونتاج من ملفات ترفعها، مش سحب تلقائي لأي حلقة.</p>
+  <label class="lbl" for="renderMode">مسار التصدير</label>
+  <select id="renderMode"><option value="motion">موشن جرافيك</option><option value="recap">ملخص سينمائي 16:9 من ملفاتك</option></select>
+  <label class="lbl" for="episodeLabel">اسم المسلسل والجزء والحلقة</label><input id="episodeLabel" placeholder="مثال: المداح ٦ | الحلقة ٣٠" />
+  <p id="recapCapability" class="hint">توليد السكريبت والأصوات من أمر واحد غير متصل حاليًا. رفع التعليق والميديا ثم تصدير MP4 متاح. مصادر الحلقة وحقوقها تحتاج مراجعة.</p>
+  <div class="row"><button id="exportProjectJson" class="ghost">تنزيل نسخة مشروع JSON</button><label class="ghost">فتح نسخة مشروع<input type="file" id="importProjectJson" accept="application/json" /></label></div>
+  <p class="hint">نسخة المشروع تحفظ النص والتوقيت والمصادر، وليس ملفات الفيديو أو الصوت. احتفظ بالملفات الأصلية؛ تخزين الموقع الحالي قد يُمسح عند إعادة النشر.</p>
 </section>
 <main class="layout">
   <!-- LEFT: script + voiceover -->
@@ -136,7 +146,7 @@
 </main>
 
 <script src="i18n.js?v=4"></script>
-<script src="app.js?v=8"></script>
+<script src="app.js?v=10"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
