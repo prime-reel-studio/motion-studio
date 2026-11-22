@@ -1,5 +1,7 @@
-FROM node:20-jammy
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg fontconfig && rm -rf /var/lib/apt/lists/*
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates xz-utils ffmpeg fontconfig && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://nodejs.org/dist/v20.18.1/node-v20.18.1-linux-x64.tar.xz | tar -xJ -C /usr/local --strip-components=1
 WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev
