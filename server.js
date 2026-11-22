@@ -38,7 +38,12 @@ try {
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
-app.use(express.static(path.join(ROOT, 'public')));
+app.use(express.static(path.join(ROOT, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.webmanifest')) res.setHeader('Content-Type', 'application/manifest+json');
+    if (filePath.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
 app.use('/uploads', express.static(dirs.uploads));
 app.use('/renders', express.static(dirs.renders));
 app.use('/tmp', express.static(dirs.tmp));
