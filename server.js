@@ -67,7 +67,7 @@ app.post('/api/login', (req, res) => {
   }
   res.status(401).json({ ok: false, message: 'wrong passcode' });
 });
-app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v8-editor' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v9-safe-entrances' }));
 // Everything else under /api, and all user content, requires the gate.
 app.use((req, res, next) => {
   const p = req.path;

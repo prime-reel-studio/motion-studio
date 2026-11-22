@@ -80,6 +80,9 @@ for gi, group in enumerate(groups):
         canvas.save(name)
         manifest.append({'file': name, 'start': round(start,4), 'end': round(end,4),
                          'x': 0, 'y': 0, 'wordCount': revealed,
+                         'roomRight': max(0, W-x-width-round(W*.025)),
+                         'roomDown': max(0, round(H*(.75 if cfg.get('credit',{}).get('provider') == 'Wikimedia Commons' else .83))-y-height),
+                         'roomUp': max(0, y-round(H*.10)),
                          'entrance': (idx+gi)%3})
         cursor += 1
 blank_path = os.path.join(cfg['outDir'], 'type_%s_blank.png' % idx)
