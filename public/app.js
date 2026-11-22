@@ -42,7 +42,7 @@ function projectPayload() {
     voiceoverStart: 0.25,
     scenes: state.scenes.map((s) => ({
       id: s.id, text: s.text, duration: s.duration,
-      media: s.media, trimStart: s.trimStart, logoMode: s.logoMode, credit: s.credit, stockQuery: s.stockQuery,
+      media: s.media, trimStart: s.trimStart, logoMode: s.logoMode, credit: s.credit, stockQuery: s.stockQuery, stockNotice: s.stockNotice,
     })),
   };
 }
@@ -186,6 +186,7 @@ function sceneCard(s, i) {
   stockBtn.textContent = 'بحث / تبديل ميديا مرخصة';
   stockBtn.onclick = () => searchSceneStock(s, body);
   body.appendChild(stockBtn);
+  if (s.stockNotice && !s.media) { const notice=document.createElement('div'); notice.className='hint'; notice.textContent=s.stockNotice; body.appendChild(notice); }
   if (s.credit) {
     const credit = document.createElement('a');
     credit.href = s.credit.source; credit.target = '_blank'; credit.rel = 'noopener';
@@ -584,9 +585,9 @@ async function searchSceneStock(s, body) {
   const search = async () => {
     status.textContent='بيدور في Pixabay…'; button.disabled=true; results.replaceChildren();
     try {
-      const r=await api('/api/stock/search',{method:'POST',body:JSON.stringify({text:s.text,query:input.value,kind:type.value})});
+      const r=await api('/api/stock/search',{method:'POST',body:JSON.stringify({text:s.text,query:input.value,kind:type.value,aspect:state.aspect})});
       input.value=r.query; s.stockQuery=r.query;
-      status.textContent=r.items.length ? 'Pixabay. اختار لقطة وراجع ملاءمتها وحقوق الأشخاص والعلامات.' : 'مفيش نتائج، جرب كلمات أبسط.';
+      status.textContent=r.items.length ? 'Pixabay. اختار لقطة وراجع ملاءمتها وحقوق الأشخاص والعلامات.' : 'مفيش لقطة مناسبة وواضحة. ارفع ميديا للمشهد أو عدّل البحث.';
       for(const item of r.items){
         const wrap=document.createElement('div'); wrap.className='stock-result';
         const img=document.createElement('img'); img.src=item.preview; img.loading='lazy'; img.alt=item.tags || '';
@@ -611,12 +612,13 @@ async function autoStockScenes() {
   for(let i=0;i<pending.length;i++){
     const s=pending[i]; status.textContent=`بيختار ميديا ${i+1} / ${pending.length}…`;
     try{
-      const r=await api('/api/stock/search',{method:'POST',body:JSON.stringify({text:s.text,query:s.stockQuery,kind:'video'})});
-      const item=r.items.find(x=>!used.has(x.id)) || r.items[0];
-      if(!item){missed++;continue;}
+      const r=await api('/api/stock/search',{method:'POST',body:JSON.stringify({text:s.text,query:s.stockQuery,kind:'video',aspect:state.aspect})});
+      const item=r.items.find(x=>x.autoEligible && !used.has(x.id));
+      if(!item){s.stockNotice='محتاج رفع: مفيش لقطة مناسبة وواضحة.';missed++;continue;}
       s.stockQuery=r.query; used.add(item.id); await applyStock(s,item); done++;
-    }catch(e){missed++;}
+    }catch(e){s.stockNotice=e.message;missed++;}
   }
-  status.textContent=`تم اختيار ${done} مشهد من Pixabay. ${missed ? missed+' مشهد محتاج كلمات بحث أوضح. ' : ''}راجع الاختيارات قبل النشر.`;
+  renderScenes();
+  status.textContent=`تم اختيار ${done} مشهد من Pixabay. ${missed ? missed+' مشهد محتاج رفع ميديا أو بحث أدق، مش هنحط لقطة ملهاش علاقة. ' : ''}راجع الاختيارات قبل النشر.`;
   button.disabled=false;
 }

@@ -66,7 +66,7 @@ app.post('/api/login', (req, res) => {
   }
   res.status(401).json({ ok: false, message: 'wrong passcode' });
 });
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v3' }));
 // Everything else under /api, and all user content, requires the gate.
 app.use((req, res, next) => {
   const p = req.path;
@@ -180,9 +180,10 @@ app.delete('/api/media/:name', (req, res) => {
 // ---------- legal stock ----------
 app.post('/api/stock/search', async (req, res) => {
   try {
+    if (stock.namedEntity(req.body.text) || stock.namedEntity(req.body.query)) return res.status(422).json({ok:false,message:'الشخص ده محتاج صورة أو فيديو ترفعه بنفسك. مش هنبدله بلقطة عامة.'});
     const query = req.body.query || stock.suggest(req.body.text);
     if (!query) return res.status(422).json({ok:false,message:'اكتب كلمات بحث بالإنجليزي للمشهد ده'});
-    res.json({ok:true,query,items:await stock.search(query,req.body.kind)});
+    res.json({ok:true,query,items:await stock.search(query,req.body.kind,req.body.aspect || '9:16')});
   } catch(e) { res.status(503).json({ok:false,message:e.message}); }
 });
 app.post('/api/stock/download', async (req,res) => {
