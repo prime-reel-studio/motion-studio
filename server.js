@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const { breakdown } = require('./lib/scenes');
 const { renderProject, previewScene } = require('./lib/render');
 const voiceover = require('./lib/voiceover');
+const stock = require('./lib/stock');
 
 const ROOT = __dirname;
 const dirs = {
@@ -106,6 +107,7 @@ app.get('/api/config', (_req, res) => {
   const sfx = fs.readdirSync(dirs.sfx).filter((f) => /\.(mp3|wav)$/i.test(f));
   res.json({
     geminiKeySet: voiceover.keySet(),
+    stockKeySet: stock.keySet(),
     voices: voiceover.VOICES,
     music,
     sfx,
@@ -143,7 +145,7 @@ app.post('/api/upload', upload.array('files', 20), (req, res) => {
 });
 
 app.get('/api/media', async (_req, res) => {
-  const names = fs.readdirSync(dirs.uploads).filter((f) => !f.startsWith('.'));
+  const names = fs.readdirSync(dirs.uploads).filter((f) => !f.startsWith('.') && !f.endsWith('.json'));
   const items = [];
   for (const name of names) {
     const kind = mediaKind(name);
@@ -172,6 +174,23 @@ app.delete('/api/media/:name', (req, res) => {
   const p = path.join(dirs.uploads, path.basename(req.params.name));
   if (fs.existsSync(p)) fs.unlinkSync(p);
   res.json({ ok: true });
+});
+
+// ---------- legal stock ----------
+app.post('/api/settings/stock', (req, res) => {
+  try { stock.configure(req.body.pixabay); res.json({ok:true}); }
+  catch (_) { res.status(400).json({ok:false,message:'Invalid stock configuration'}); }
+});
+app.post('/api/stock/search', async (req, res) => {
+  try {
+    const query = req.body.query || stock.suggest(req.body.text);
+    if (!query) return res.status(422).json({ok:false,message:'اكتب كلمات بحث بالإنجليزي للمشهد ده'});
+    res.json({ok:true,query,items:await stock.search(query,req.body.kind)});
+  } catch(e) { res.status(503).json({ok:false,message:e.message}); }
+});
+app.post('/api/stock/download', async (req,res) => {
+  try { res.json({ok:true,file:await stock.download(req.body.token,dirs.uploads)}); }
+  catch(e) { res.status(400).json({ok:false,message:e.message}); }
 });
 
 // ---------- voiceover ----------

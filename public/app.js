@@ -41,7 +41,7 @@ function projectPayload() {
     voiceoverStart: 0.25,
     scenes: state.scenes.map((s) => ({
       id: s.id, text: s.text, duration: s.duration,
-      media: s.media, trimStart: s.trimStart, logoMode: s.logoMode,
+      media: s.media, trimStart: s.trimStart, logoMode: s.logoMode, credit: s.credit, stockQuery: s.stockQuery,
     })),
   };
 }
@@ -71,6 +71,8 @@ async function init() {
   buildAspectRow();
   updateKeyPill();
   bindEvents();
+  $('autoStockBtn').onclick = autoStockScenes;
+  $('stockStatus').textContent = state.config.stockKeySet ? 'Pixabay متصل. راجع الميديا والأشخاص والعلامات قبل النشر.' : 'خدمة الميديا لسه مش متصلة. الموشن جرافيك شغال بدونها.';
   await refreshMedia();
   await refreshProjects();
   renderScenes();
@@ -171,12 +173,23 @@ function sceneCard(s, i) {
   body.querySelector('[data-f="text"]').oninput = (e) => (s.text = e.target.value);
   body.querySelector('[data-f="duration"]').oninput = (e) => (s.duration = parseFloat(e.target.value) || s.duration);
   body.querySelector('[data-f="trimStart"]').oninput = (e) => (s.trimStart = parseFloat(e.target.value) || 0);
-  body.querySelector('[data-f="media"]').onchange = (e) => { s.media = e.target.value || null; s.previewUrl = null; };
+  body.querySelector('[data-f="media"]').onchange = (e) => { s.media = e.target.value || null; s.previewUrl = null; s.credit = null; };
   body.querySelector('[data-f="logoMode"]').onchange = (e) => { s.logoMode = e.target.checked; s.previewUrl = null; };
   body.querySelector('[data-a="up"]').onclick = () => moveScene(i, -1);
   body.querySelector('[data-a="down"]').onclick = () => moveScene(i, 1);
   body.querySelector('[data-a="del"]').onclick = () => { state.scenes.splice(i, 1); renderScenes(); };
 
+  const stockBtn = document.createElement('button');
+  stockBtn.className = 'mini';
+  stockBtn.textContent = 'بحث / تبديل ميديا مرخصة';
+  stockBtn.onclick = () => searchSceneStock(s, body);
+  body.appendChild(stockBtn);
+  if (s.credit) {
+    const credit = document.createElement('a');
+    credit.href = s.credit.source; credit.target = '_blank'; credit.rel = 'noopener';
+    credit.textContent = 'Pixabay · ' + (s.credit.author || 'المصدر');
+    credit.className = 'hint'; body.appendChild(credit);
+  }
   card.appendChild(thumb);
   card.appendChild(body);
   return card;
@@ -261,6 +274,7 @@ function bindEvents() {
     const { scenes } = await api('/api/breakdown', { method: 'POST', body: JSON.stringify({ script }) });
     state.scenes = scenes;
     renderScenes();
+    if ($('autoStock').checked) await autoStockScenes();
   };
 
   $('genVoBtn').onclick = async () => {
@@ -550,3 +564,58 @@ async function bootApp() {
 bootApp();
 document.addEventListener('DOMContentLoaded', () => setTimeout(ensureBuilt, 300));
 window.addEventListener('load', () => setTimeout(ensureBuilt, 800));
+
+async function applyStock(s, item) {
+  const {file} = await api('/api/stock/download', {method:'POST',body:JSON.stringify({token:item.token})});
+  s.media = file.name; s.credit = file.credit; s.previewUrl = null; s.logoMode = false;
+  await refreshMedia(); renderScenes();
+}
+async function searchSceneStock(s, body) {
+  body.querySelector('.stock-picker')?.remove();
+  const panel = document.createElement('div'); panel.className = 'stock-picker';
+  const input = document.createElement('input'); input.placeholder = 'كلمات البحث بالإنجليزي، مثال: football stadium'; input.value = s.stockQuery || '';
+  const type = document.createElement('select');
+  type.innerHTML = '<option value="video">فيديو</option><option value="image">صورة</option>';
+  const button = document.createElement('button'); button.className = 'mini'; button.textContent='بحث';
+  const results = document.createElement('div'); results.className = 'stock-results';
+  const status = document.createElement('div'); status.className='hint';
+  panel.append(input,type,button,status,results); body.appendChild(panel);
+  const search = async () => {
+    status.textContent='بيدور في Pixabay…'; button.disabled=true; results.replaceChildren();
+    try {
+      const r=await api('/api/stock/search',{method:'POST',body:JSON.stringify({text:s.text,query:input.value,kind:type.value})});
+      input.value=r.query; s.stockQuery=r.query;
+      status.textContent=r.items.length ? 'Pixabay. اختار لقطة وراجع ملاءمتها وحقوق الأشخاص والعلامات.' : 'مفيش نتائج، جرب كلمات أبسط.';
+      for(const item of r.items){
+        const wrap=document.createElement('div'); wrap.className='stock-result';
+        const img=document.createElement('img'); img.src=item.preview; img.loading='lazy'; img.alt=item.tags || '';
+        const link=document.createElement('a'); link.href=item.source; link.target='_blank'; link.rel='noopener'; link.textContent='Pixabay · '+item.author;
+        const use=document.createElement('button'); use.className='mini'; use.textContent='استخدم';
+        use.onclick=async()=>{use.disabled=true;use.textContent='بيحمّل…';try{await applyStock(s,item);}catch(e){status.textContent=e.message;use.disabled=false;use.textContent='استخدم';}};
+        wrap.append(img,link,use); results.appendChild(wrap);
+      }
+    }catch(e){status.textContent=e.message;}finally{button.disabled=false;}
+  };
+  button.onclick=search;
+  if(!input.value) await search();
+}
+async function autoStockScenes() {
+  const status=$('stockStatus'), button=$('autoStockBtn');
+  if(!state.config.stockKeySet){status.textContent='الميديا التلقائية محتاجة توصيل Pixabay. الموشن جرافيك متاح.';return;}
+  const pending=state.scenes.filter(s=>!s.media).slice(0,20);
+  if(!pending.length){status.textContent='كل المشاهد فيها ميديا بالفعل.';return;}
+  button.disabled=true;
+  let done=0,missed=0;
+  const used=new Set();
+  for(let i=0;i<pending.length;i++){
+    const s=pending[i]; status.textContent=`بيختار ميديا ${i+1} / ${pending.length}…`;
+    try{
+      const r=await api('/api/stock/search',{method:'POST',body:JSON.stringify({text:s.text,query:s.stockQuery,kind:'video'})});
+      const item=r.items.find(x=>!used.has(x.id)) || r.items[0];
+      if(!item){missed++;continue;}
+      s.stockQuery=r.query; used.add(item.id); await applyStock(s,item); done++;
+    }catch(e){missed++;}
+  }
+  status.textContent=`تم اختيار ${done} مشهد من Pixabay. ${missed ? missed+' مشهد محتاج كلمات بحث أوضح. ' : ''}راجع الاختيارات قبل النشر.`;
+  button.disabled=false;
+}
