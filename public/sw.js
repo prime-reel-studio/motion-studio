@@ -1,4 +1,4 @@
-const CACHE = 'prime-studio-v1';
+const CACHE = 'prime-studio-v2';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'i18n.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -11,19 +11,20 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// App shell: cache-first. API calls, uploads and renders: always network.
+// App shell: network-first so deploys reach users immediately; cache is the offline fallback.
+// API calls, uploads and renders: always network.
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/') || url.pathname.startsWith('/renders/') || url.pathname.startsWith('/tmp/')) {
     return;
   }
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request).then((res) => {
+    fetch(e.request).then((res) => {
       if (res.ok && url.origin === location.origin) {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
       }
       return res;
-    }).catch(() => caches.match('./')))
+    }).catch(() => caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || caches.match('./')))
   );
 });
