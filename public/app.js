@@ -17,6 +17,7 @@ const $ = (id) => document.getElementById(id);
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     headers: opts.body instanceof FormData ? undefined : { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(path === '/api/config' ? 15000 : 90000),
     ...opts,
   });
   const json = await res.json().catch(() => ({}));
@@ -562,8 +563,7 @@ async function bootApp() {
   }
 }
 bootApp();
-document.addEventListener('DOMContentLoaded', () => setTimeout(ensureBuilt, 300));
-window.addEventListener('load', () => setTimeout(ensureBuilt, 800));
+
 
 async function applyStock(s, item) {
   const {file} = await api('/api/stock/download', {method:'POST',body:JSON.stringify({token:item.token})});
