@@ -33,6 +33,7 @@ function projectPayload() {
     title: state.projectName || 'reel',
     aspect: state.aspect,
     preset: state.preset,
+    motionTheme: $('motionTheme').value,
     musicTrack: state.musicTrack,
     musicVolume: $('musicVol').value / 100 * 0.8,
     sfxOn: $('sfxToggle').checked,
@@ -194,7 +195,7 @@ async function previewScene(s) {
   try {
     const r = await api('/api/preview-scene', {
       method: 'POST',
-      body: JSON.stringify({ scene: s, project: { aspect: state.aspect, preset: state.preset } }),
+      body: JSON.stringify({ scene: s, project: { aspect: state.aspect, preset: state.preset, motionTheme: $('motionTheme').value } }),
     });
     s.previewUrl = r.url;
   } catch (e) {
@@ -375,6 +376,7 @@ async function loadProject(name) {
   state.projectName = n;
   state.scenes = data.scenes || [];
   state.preset = data.preset || 'cinematic';
+  $('motionTheme').value = data.motionTheme || 'random';
   state.aspect = data.aspect || '9:16';
   state.musicTrack = data.musicTrack;
   state.voiceover = data.voiceover || null;
