@@ -67,7 +67,7 @@ app.post('/api/login', (req, res) => {
   }
   res.status(401).json({ ok: false, message: 'wrong passcode' });
 });
-app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v7-reels' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v8-editor' }));
 // Everything else under /api, and all user content, requires the gate.
 app.use((req, res, next) => {
   const p = req.path;
@@ -275,31 +275,12 @@ app.post('/api/thumbnail', async (req, res) => {
   const outPath = path.join(dirs.renders, outThumb);
   try {
     const W = 1080, H = 1920;
-    // Dedicated thumbnail title: top-third, static (no karaoke/fade), boxed, Noto Naskh Arabic (shapes via libass).
-    const cleanTitle = String(title || '').slice(0, 60).replace(/[{}\\]/g, '');
-    const ass = `[Script Info]
-ScriptType: v4.00+
-PlayResX: ${W}
-PlayResY: ${H}
-ScaledBorderAndShadow: yes
-WrapStyle: 0
-
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: T, Noto Naskh Arabic, 120, &H00008CFF, &H00FFFFFF, &H64000000, &HA0060608, 1, 0, 0, 0, 100, 100, 1, 0, 3, 26, 0, 8, 70, 70, 300, 1
-
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: 0,0:00:00.00,0:00:05.00,T,,0,0,0,,${cleanTitle}
-`;
-    const assPath = path.join(dirs.tmp, 'thumb_' + Date.now() + '.ass');
-    fs.writeFileSync(assPath, ass, 'utf8');
-    const esc = assPath.replace(/'/g, "'\\''").replace(/:/g, '\\:');
+    // Use an actual export frame. Do not add the old sentence-style font on top.
     await new Promise((resolve, reject) => {
       const { spawn } = require('child_process');
       const p = spawn('ffmpeg', ['-y', '-loglevel', 'error',
         '-i', src, '-ss', '0.8',
-        '-vf', "scale=" + W + ":" + H + ":force_original_aspect_ratio=increase,crop=" + W + ":" + H + ",eq=brightness=-0.06,subtitles='" + esc + "'",
+        '-vf', "scale=" + W + ":" + H + ":force_original_aspect_ratio=increase,crop=" + W + ":" + H,
         '-frames:v', '1', '-q:v', '3', outPath]);
       let err = '';
       p.stderr.on('data', (d) => (err += d));

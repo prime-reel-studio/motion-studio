@@ -42,7 +42,7 @@ function projectPayload() {
     voiceoverStart: 0.25,
     scenes: state.scenes.map((s) => ({
       id: s.id, text: s.text, duration: s.duration,
-      media: s.media, trimStart: s.trimStart, logoMode: s.logoMode, credit: s.credit, stockQuery: s.stockQuery, stockNotice: s.stockNotice,
+      media: s.media, trimStart: s.trimStart, logoMode: s.logoMode, portraitCard: s.portraitCard, credit: s.credit, stockQuery: s.stockQuery, stockNotice: s.stockNotice,
     })),
   };
 }
@@ -162,6 +162,7 @@ function sceneCard(s, i) {
     </div>
     <div class="scene-controls">
       <label class="check" style="margin:0"><input type="checkbox" data-f="logoMode" ${s.logoMode ? 'checked' : ''}/> ${t('logoMode')}</label>
+      <label class="check" style="margin:0"><input type="checkbox" data-f="portraitCard" ${s.portraitCard ? 'checked' : ''} ${state.media.find(m=>m.name===s.media)?.kind==='image'?'':'disabled'}/> صورة داخل كارت متحرك</label>
       <button class="mini" data-a="up">↑</button>
       <button class="mini" data-a="down">↓</button>
       <button class="mini" data-a="del">✕</button>
@@ -176,7 +177,8 @@ function sceneCard(s, i) {
   body.querySelector('[data-f="duration"]').oninput = (e) => (s.duration = parseFloat(e.target.value) || s.duration);
   body.querySelector('[data-f="trimStart"]').oninput = (e) => (s.trimStart = parseFloat(e.target.value) || 0);
   body.querySelector('[data-f="media"]').onchange = (e) => { s.media = e.target.value || null; s.previewUrl = null; s.credit = null; };
-  body.querySelector('[data-f="logoMode"]').onchange = (e) => { s.logoMode = e.target.checked; s.previewUrl = null; };
+  body.querySelector('[data-f="logoMode"]').onchange = (e) => { s.logoMode = e.target.checked; if(s.logoMode)s.portraitCard=false; s.previewUrl = null; renderScenes(); };
+  body.querySelector('[data-f="portraitCard"]').onchange = (e) => { s.portraitCard=e.target.checked;if(s.portraitCard)s.logoMode=false;s.previewUrl=null;renderScenes(); };
   body.querySelector('[data-a="up"]').onclick = () => moveScene(i, -1);
   body.querySelector('[data-a="down"]').onclick = () => moveScene(i, 1);
   body.querySelector('[data-a="del"]').onclick = () => { state.scenes.splice(i, 1); renderScenes(); };
@@ -571,7 +573,7 @@ bootApp();
 
 async function applyStock(s, item) {
   const {file} = await api('/api/stock/download', {method:'POST',body:JSON.stringify({token:item.token})});
-  s.media = file.name; s.stockNotice = null; s.credit = file.credit; s.previewUrl = null; s.logoMode = false;
+  s.media = file.name; s.stockNotice = null; s.credit = file.credit; s.portraitCard=file.kind==='image' && file.credit.provider==='Wikimedia Commons' && state.scenes.indexOf(s)%2===0; s.previewUrl = null; s.logoMode = false;
   await refreshMedia(); renderScenes();
 }
 async function searchSceneStock(s, body) {
