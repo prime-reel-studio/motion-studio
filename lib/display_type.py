@@ -84,8 +84,8 @@ credit = cfg.get('credit') or {}
 if credit.get('provider') == 'Wikimedia Commons':
     # Persistent attribution survives posting, alongside the downloadable full credits.
     font = ImageFont.truetype(latin_font, max(22, round(W*.030)), layout_engine=RAQM)
-    lines = textwrap.wrap('Photo: ' + credit.get('author',''), width=46)[:3]
-    lines += [credit.get('license','') + ' | cropped & animated', credit.get('licenseUrl','').replace('https://','').replace('http://','')]
+    lines = textwrap.wrap(('Video: ' if credit.get('kind') == 'video' else 'Photo: ') + credit.get('author',''), width=46)[:3]
+    lines += [credit.get('license','') + (' | cropped, audio removed' if credit.get('kind') == 'video' else ' | cropped & animated'), credit.get('licenseUrl','').replace('https://','').replace('http://','')]
     lh = round(W*.044)
     img = Image.new('RGBA',(round(W*.94), lh*len(lines)+28),(0,0,0,145))
     draw = ImageDraw.Draw(img)
