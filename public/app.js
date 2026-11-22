@@ -657,7 +657,7 @@ function showEpisodeEvidence(r){
  const target=r.target;const p=document.createElement('p');p.textContent=target?`${target.series||'اسم غير محدد'} | الجزء: ${target.season||'غير محدد'} | الحلقة: ${target.episode||'غير محددة'} | ${target.message||''}`:r.message;box.appendChild(p);
  if(r.message){const note=document.createElement('p');note.textContent=r.message;box.appendChild(note);}
  for(const item of r.items||[]){const row=document.createElement('p');const a=document.createElement('a');a.href=item.url;a.target='_blank';a.rel='noopener';a.textContent=item.title;row.appendChild(a);const status=document.createElement('span');status.textContent=item.identityStatus==='title_candidate'?' | تطابق عنوان مبدئي فقط، الحقوق والصورة غير متحققين':' | تطابق الحلقة غير مثبت، لا تستخدم تلقائيًا';row.appendChild(status);box.appendChild(row);}
- if(r.items&&!r.items.length){const note=document.createElement('p');note.textContent='مفيش نتيجة في الأرشيف المحدود ده. لم يتم تحميل صور أو فيديو، ولم نستبدل الحلقة.';box.appendChild(note);}
+ if(r.items&&!r.items.length){const note=document.createElement('p');note.textContent=`لم نجد تطابق عنوان للحلقة المطلوبة في نتائج الأرشيف المحدود. استبعدنا ${r.rejectedCount||0} نتيجة غير مطابقة. لم يتم تحميل صور أو فيديو، ولم نستبدل الحلقة. ده لا يثبت إن الحلقة غير موجودة في مصادر أخرى.`;box.appendChild(note);}
 }
 function initRecapControls(){
  for(const [id,route] of [['parseEpisodeBtn','parse'],['discoverEpisodeBtn','discover']])$(id).onclick=async()=>{
