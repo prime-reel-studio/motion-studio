@@ -1,0 +1,233 @@
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+
+const { breakdown } = require('./lib/scenes');
+const { renderProject, previewScene } = require('./lib/render');
+const voiceover = require('./lib/voiceover');
+
+const ROOT = __dirname;
+const dirs = {
+  uploads: path.join(ROOT, 'uploads'),
+  renders: path.join(ROOT, 'renders'),
+  tmp: path.join(ROOT, 'tmp'),
+  projects: path.join(ROOT, 'projects'),
+  music: path.join(ROOT, 'assets', 'music'),
+  sfx: path.join(ROOT, 'assets', 'sfx'),
+};
+for (const d of Object.values(dirs)) fs.mkdirSync(d, { recursive: true });
+
+// Bundled Arabic fonts: install into the user font dir so libass shapes
+// captions correctly (Noto Naskh Arabic is the caption font). Linux only;
+// on other platforms install assets/fonts/*.ttf manually once.
+try {
+  const os = require('os');
+  const { execSync } = require('child_process');
+  const fontDir = path.join(os.homedir(), '.fonts');
+  if (process.platform === 'linux') {
+    fs.mkdirSync(fontDir, { recursive: true });
+    for (const f of fs.readdirSync(path.join(ROOT, 'assets', 'fonts'))) {
+      const dest = path.join(fontDir, f);
+      if (!fs.existsSync(dest)) fs.copyFileSync(path.join(ROOT, 'assets', 'fonts', f), dest);
+    }
+    execSync('fc-cache -f >/dev/null 2>&1 || true');
+  }
+} catch (_) {}
+
+const app = express();
+app.use(express.json({ limit: '20mb' }));
+app.use(express.static(path.join(ROOT, 'public')));
+app.use('/uploads', express.static(dirs.uploads));
+app.use('/renders', express.static(dirs.renders));
+app.use('/tmp', express.static(dirs.tmp));
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: dirs.uploads,
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const base = path
+        .basename(file.originalname, ext)
+        .replace(/[^\p{L}\p{N}_-]+/gu, '_')
+        .slice(0, 50) || 'file';
+      cb(null, `${Date.now()}-${base}${ext}`);
+    },
+  }),
+  limits: { fileSize: 500 * 1024 * 1024 },
+});
+
+const jobs = new Map();
+
+// ---------- config ----------
+app.get('/api/config', (_req, res) => {
+  const music = fs.readdirSync(dirs.music).filter((f) => /\.(mp3|wav|m4a)$/i.test(f));
+  const sfx = fs.readdirSync(dirs.sfx).filter((f) => /\.(mp3|wav)$/i.test(f));
+  res.json({
+    geminiKeySet: voiceover.keySet(),
+    voices: voiceover.VOICES,
+    music,
+    sfx,
+    presets: ['cinematic', 'sports', 'minimal', 'club'],
+    aspects: ['9:16', '1:1', '16:9'],
+  });
+});
+
+// ---------- script breakdown ----------
+app.post('/api/breakdown', (req, res) => {
+  const scenes = breakdown(req.body.script || '');
+  res.json({ scenes });
+});
+
+// ---------- media ----------
+const IMAGE_RE = /\.(jpe?g|png|webp|gif)$/i;
+const VIDEO_RE = /\.(mp4|mov|webm|mkv)$/i;
+const AUDIO_RE = /\.(mp3|wav|m4a|aac|ogg)$/i;
+
+function mediaKind(name) {
+  if (IMAGE_RE.test(name)) return 'image';
+  if (VIDEO_RE.test(name)) return 'video';
+  if (AUDIO_RE.test(name)) return 'audio';
+  return 'other';
+}
+
+app.post('/api/upload', upload.array('files', 20), (req, res) => {
+  const files = (req.files || []).map((f) => ({
+    name: path.basename(f.path),
+    kind: mediaKind(f.filename),
+    size: f.size,
+    url: '/uploads/' + path.basename(f.path),
+  }));
+  res.json({ files });
+});
+
+app.get('/api/media', async (_req, res) => {
+  const names = fs.readdirSync(dirs.uploads).filter((f) => !f.startsWith('.'));
+  const items = [];
+  for (const name of names) {
+    const kind = mediaKind(name);
+    let thumb = null;
+    if (kind === 'image') thumb = '/uploads/' + name;
+    if (kind === 'video') {
+      const t = path.join(dirs.tmp, 'thumb_' + name.replace(/[^\w.-]/g, '_') + '.jpg');
+      if (!fs.existsSync(t)) {
+        try {
+          await new Promise((resolve) => {
+            const { spawn } = require('child_process');
+            const p = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '0.5', '-i', path.join(dirs.uploads, name), '-frames:v', '1', '-vf', 'scale=320:-2', t]);
+            p.on('close', resolve);
+            p.on('error', resolve);
+          });
+        } catch (_) {}
+      }
+      if (fs.existsSync(t)) thumb = '/tmp/' + path.basename(t);
+    }
+    items.push({ name, kind, thumb, url: '/uploads/' + name });
+  }
+  res.json({ media: items });
+});
+
+app.delete('/api/media/:name', (req, res) => {
+  const p = path.join(dirs.uploads, path.basename(req.params.name));
+  if (fs.existsSync(p)) fs.unlinkSync(p);
+  res.json({ ok: true });
+});
+
+// ---------- voiceover ----------
+app.post('/api/voiceover', async (req, res) => {
+  const { text, voice } = req.body || {};
+  if (!text || !text.trim()) return res.status(400).json({ ok: false, message: 'empty text' });
+  try {
+    const result = await voiceover.generateTTS(text, voice, dirs.uploads);
+    if (result.ok) return res.json({ ok: true, file: result.file, url: '/uploads/' + result.file });
+    res.status(result.needsKey ? 412 : 500).json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, message: String(e.message || e) });
+  }
+});
+
+// ---------- scene preview ----------
+app.post('/api/preview-scene', async (req, res) => {
+  const { scene, project } = req.body || {};
+  if (!scene) return res.status(400).json({ ok: false, message: 'no scene' });
+  const outFile = path.join(dirs.tmp, `pv_${crypto.randomBytes(4).toString('hex')}.jpg`);
+  try {
+    await previewScene(scene, project || {}, dirs, outFile);
+    res.json({ ok: true, url: '/tmp/' + path.basename(outFile) + '?t=' + Date.now() });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: String(e.message || e) });
+  }
+});
+
+// ---------- render ----------
+app.post('/api/render', (req, res) => {
+  const project = req.body.project;
+  if (!project || !Array.isArray(project.scenes) || !project.scenes.length) {
+    return res.status(400).json({ ok: false, message: 'project has no scenes' });
+  }
+  const id = 'job-' + crypto.randomBytes(4).toString('hex');
+  const job = { id, status: 'running', progress: 0, message: 'starting', outName: null, error: null };
+  jobs.set(id, job);
+  renderProject(JSON.parse(JSON.stringify(project)), job, dirs)
+    .then(({ outName, duration }) => {
+      job.status = 'done';
+      job.outName = outName;
+      job.url = '/renders/' + outName;
+      job.duration = duration;
+      job.progress = 1;
+    })
+    .catch((e) => {
+      job.status = 'error';
+      job.error = String(e.message || e);
+    });
+  res.json({ ok: true, jobId: id });
+});
+
+app.get('/api/jobs/:id', (req, res) => {
+  const job = jobs.get(req.params.id);
+  if (!job) return res.status(404).json({ ok: false });
+  res.json(job);
+});
+
+// ---------- projects ----------
+function safeProjName(n) {
+  return (n || 'project').replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 60) || 'project';
+}
+
+app.post('/api/project', (req, res) => {
+  const { name, data } = req.body || {};
+  if (!data) return res.status(400).json({ ok: false });
+  const file = path.join(dirs.projects, safeProjName(name) + '.json');
+  fs.writeFileSync(file, JSON.stringify({ name, data, savedAt: new Date().toISOString() }, null, 2));
+  res.json({ ok: true });
+});
+
+app.get('/api/projects', (_req, res) => {
+  const list = fs
+    .readdirSync(dirs.projects)
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => {
+      try {
+        const j = JSON.parse(fs.readFileSync(path.join(dirs.projects, f), 'utf8'));
+        return { name: j.name, savedAt: j.savedAt };
+      } catch (_) {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+  res.json({ projects: list });
+});
+
+app.get('/api/project/:name', (req, res) => {
+  const file = path.join(dirs.projects, safeProjName(req.params.name) + '.json');
+  if (!fs.existsSync(file)) return res.status(404).json({ ok: false });
+  res.json(JSON.parse(fs.readFileSync(file, 'utf8')));
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Motion Studio running: http://localhost:${PORT}`);
+  console.log(`Gemini voiceover key: ${voiceover.keySet() ? 'set' : 'NOT set (uploaded voiceover still works)'}`);
+});

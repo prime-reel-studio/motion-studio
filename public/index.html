@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reel Studio — استوديو الريلز</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">RS</div>
+    <div>
+      <h1 data-i18n="appTitle">ريل ستوديو</h1>
+      <span class="tagline" data-i18n="tagline">استوديو موشن جرافيك شخصي</span>
+    </div>
+  </div>
+  <div class="top-actions">
+    <select id="projectSelect" class="ghost" title="Projects"></select>
+    <button id="saveProjectBtn" class="ghost" data-i18n="save">حفظ المشروع</button>
+    <button id="langToggle" class="ghost">English</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- LEFT: script + voiceover -->
+  <section class="col">
+    <div class="panel">
+      <h2><span class="step">1</span><span data-i18n="script">السكريبت</span></h2>
+      <textarea id="scriptInput" data-i18n-ph="scriptPh" placeholder="اكتب أو الصق السكريبت هنا… كل فقرة هتتحول لمشهد."></textarea>
+      <div class="row">
+        <button id="breakdownBtn" class="primary" data-i18n="analyze">حلّل إلى مشاهد</button>
+        <span class="hint" data-i18n="analyzeHint">تحليل محلي، مش محتاج مفتاح API</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step">2</span><span data-i18n="vo">التعليق الصوتي</span></h2>
+      <div id="keyStatus" class="pill"></div>
+      <div class="row">
+        <select id="voiceSelect"></select>
+        <button id="genVoBtn" class="primary" data-i18n="genVo">ولّد تعليق صوتي</button>
+      </div>
+      <div class="row muted-or"><span data-i18n="orUpload">أو ارفع تعليق جاهز</span></div>
+      <input type="file" id="voUpload" accept="audio/*" />
+      <audio id="voPlayer" controls style="display:none"></audio>
+      <div id="voState" class="hint"></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step">3</span><span data-i18n="sound">الصوتيات</span></h2>
+      <label class="lbl" data-i18n="music">موسيقى خلفية</label>
+      <select id="musicSelect"></select>
+      <label class="lbl"><span data-i18n="musicVol">مستوى الموسيقى</span> <span id="musicVolVal">50%</span></label>
+      <input type="range" id="musicVol" min="0" max="100" value="50" />
+      <label class="check"><input type="checkbox" id="sfxToggle" checked /> <span data-i18n="sfx">مؤثرات صوتية عند الانتقالات (whoosh)</span></label>
+      <div class="hint" data-i18n="duckHint">الموسيقى بتنخفض تلقائيًا تحت التعليق الصوتي</div>
+    </div>
+  </section>
+
+  <!-- CENTER: scenes timeline -->
+  <section class="col wide">
+    <div class="panel grow">
+      <h2><span class="step">4</span><span data-i18n="scenes">المشاهد</span> <span id="sceneCount" class="count"></span></h2>
+      <div id="sceneList" class="scene-list"></div>
+    </div>
+  </section>
+
+  <!-- RIGHT: media + render -->
+  <section class="col">
+    <div class="panel">
+      <h2><span class="step">5</span><span data-i18n="mediaLib">مكتبة الميديا</span></h2>
+      <div id="dropzone" class="dropzone" data-i18n="drop">اسحب صور / فيديو / لوجو هنا أو اضغط للاختيار</div>
+      <input type="file" id="mediaInput" multiple accept="image/*,video/*" hidden />
+      <div id="mediaGrid" class="media-grid"></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step">6</span><span data-i18n="export">التصدير</span></h2>
+      <label class="lbl" data-i18n="preset">الستايل البصري</label>
+      <div id="presetRow" class="preset-row"></div>
+      <label class="lbl" data-i18n="aspect">المقاس</label>
+      <div id="aspectRow" class="preset-row"></div>
+      <button id="renderBtn" class="primary big" data-i18n="render">رندر الفيديو</button>
+      <div id="renderProgress" class="progress" style="display:none"><div id="renderBar"></div></div>
+      <div id="renderMsg" class="hint"></div>
+      <video id="resultVideo" controls playsinline style="display:none"></video>
+      <a id="downloadLink" class="primary big" style="display:none" data-i18n="download">تحميل MP4</a>
+    </div>
+  </section>
+</main>
+
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
