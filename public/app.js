@@ -42,10 +42,21 @@ function projectPayload() {
 }
 
 /* ---------- config & init ---------- */
+async function fetchConfigWithRetry() {
+  // The shell loads instantly from the PWA cache while the free-tier container may
+  // still be waking; retry for up to ~75s before giving up.
+  let lastErr;
+  for (let i = 0; i < 15; i++) {
+    try { return await api('/api/config'); }
+    catch (e) { lastErr = e; await new Promise((r) => setTimeout(r, 5000)); }
+  }
+  throw lastErr || new Error('config unreachable');
+}
+
 async function init() {
   applyI18n();
   buildTemplates();
-  state.config = await api('/api/config');
+  state.config = await fetchConfigWithRetry();
   buildVoiceSelect();
   buildMusicSelect();
   buildPresetRow();
@@ -369,10 +380,11 @@ init().catch((e) => { console.error(e); showFatalHint(e); });
 // Safety net: if init raced the DOM or an await hung, guarantee the gallery + core UI build.
 document.addEventListener('DOMContentLoaded', () => setTimeout(ensureBuilt, 300));
 window.addEventListener('load', () => setTimeout(ensureBuilt, 800));
-function ensureBuilt() {
+async function ensureBuilt() {
   try {
     if ($('tplRow') && !$('tplRow').children.length) buildTemplates();
-    if ($('presetRow') && !$('presetRow').children.length && state.config) { buildPresetRow(); buildAspectRow(); buildMusicSelect(); }
+    if (!state.config) state.config = await fetchConfigWithRetry();
+    if ($('presetRow') && !$('presetRow').children.length) { buildVoiceSelect(); buildMusicSelect(); buildPresetRow(); buildAspectRow(); updateKeyPill(); }
   } catch (e) { console.error('ensureBuilt', e); }
 }
 function showFatalHint(e) {
