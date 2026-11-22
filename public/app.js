@@ -207,6 +207,7 @@ async function refreshMedia() {
   const grid = $('mediaGrid');
   grid.innerHTML = '';
   for (const m of media) {
+    if (m.kind === 'audio') continue; // audio lives in the voiceover/music sections, not the visual library
     const item = document.createElement('div');
     item.className = 'media-item';
     item.innerHTML =
@@ -268,7 +269,8 @@ function bindEvents() {
       $('voPlayer').style.display = 'block';
       $('voState').textContent = t('voReady');
     } catch (e) {
-      $('voState').textContent = t('voFail') + ': ' + e.message;
+      const noKey = (e.status === 412) || /GEMINI_API_KEY/i.test(e.message || '');
+      $('voState').textContent = noKey ? t('voNeedKey') : (t('voFail') + ': ' + e.message);
     }
   };
 
@@ -454,17 +456,17 @@ function renderTimeline() {
 // ---------- template gallery ----------
 const TEMPLATES = [
   { id: 'matchday', emoji: '⚽', ar: 'إعلان ماتش', en: 'Matchday', desc_ar: 'إعلان ماتش جاي بتاريخ وملعب', desc_en: 'Upcoming match announcement', gradient: 'linear-gradient(135deg,#1a1a1f,#3a2f10)', preset: 'sports', aspect: '9:16', music: 'Upbeat Forever.mp3',
-    script: 'يوم الماتش وصل!\nبرايم أكاديمي ضد المنافس القادم\nالجمعة الساعة 4 عصرًا — الملعب الرئيسي\nتعالوا شجعوا أبطالنا' },
+    script: 'يوم الماتش وصل!\n\nبرايم أكاديمي ضد المنافس القادم\n\nالجمعة الساعة 4 عصرًا — الملعب الرئيسي\n\nتعالوا شجعوا أبطالنا' },
   { id: 'highlights', emoji: '🔥', ar: 'لقطات الماتش', en: 'Highlights', desc_ar: 'أجمل لقطات من آخر ماتش', desc_en: 'Best moments from the last match', gradient: 'linear-gradient(135deg,#101016,#5a1010)', preset: 'cinematic', aspect: '9:16', music: 'Inspired.mp3',
-    script: 'لقطات ما تتنسيش من الماتش الأخير\nمهارات وأهداف بمستوى تاني\nبرايم أكاديمي — حيث يولد الأبطال' },
+    script: 'لقطات ما تتنسيش من الماتش الأخير\n\nمهارات وأهداف بمستوى تاني\n\nبرايم أكاديمي — حيث يولد الأبطال' },
   { id: 'goal', emoji: '🥅', ar: 'جول الأسبوع', en: 'Goal of the week', desc_ar: 'أحلى جول في الأسبوع', desc_en: 'Best goal this week', gradient: 'linear-gradient(135deg,#0c1a0c,#2f5a10)', preset: 'sports', aspect: '9:16', music: 'Upbeat Forever.mp3',
-    script: 'جول الأسبوع من برايم أكاديمي\nتسديدة ما تتصدش!\nشوف الإبداع بنفسك' },
+    script: 'جول الأسبوع من برايم أكاديمي\n\nتسديدة ما تتصدش!\n\nشوف الإبداع بنفسك' },
   { id: 'player', emoji: '⭐', ar: 'تقديم لاعب', en: 'Player intro', desc_ar: 'قدّم لاعب جديد أو نجم الأسبوع', desc_en: 'Introduce a player', gradient: 'linear-gradient(135deg,#141420,#3a2f10)', preset: 'club', aspect: '9:16', music: 'Deliberate Thought.mp3',
-    script: 'نجمنا الصاعد\nموهبة من برايم أكاديمي\nالمستقبل بيبدأ من هنا' },
+    script: 'نجمنا الصاعد\n\nموهبة من برايم أكاديمي\n\nالمستقبل بيبدأ من هنا' },
   { id: 'training', emoji: '💪', ar: 'تدريبات', en: 'Training', desc_ar: 'لقطات من التدريب اليومي', desc_en: 'Training montage', gradient: 'linear-gradient(135deg,#101820,#1f3a5a)', preset: 'minimal', aspect: '9:16', music: 'Wholesome.mp3',
-    script: 'شغل كل يوم\nالتفاصيل الصغيرة بتفرق\nبرايم أكاديمي — انضباط وشغف' },
+    script: 'شغل كل يوم\n\nالتفاصيل الصغيرة بتفرق\n\nبرايم أكاديمي — انضباط وشغف' },
   { id: 'promo', emoji: '🏆', ar: 'اشترك الآن', en: 'Join us', desc_ar: 'دعوة للاشتراك في الأكاديمية', desc_en: 'Academy sign-up promo', gradient: 'linear-gradient(135deg,#1a1408,#6a5410)', preset: 'club', aspect: '9:16', music: 'Inspired.mp3',
-    script: 'ابنك عنده موهبة؟\nبرايم أكاديمي بتستقبل لاعبين جدد\nاحجز مكانك دلوقتي — الأماكن محدودة' },
+    script: 'ابنك عنده موهبة؟\n\nبرايم أكاديمي بتستقبل لاعبين جدد\n\nاحجز مكانك دلوقتي — الأماكن محدودة' },
 ];
 
 function buildTemplates() {

@@ -19,7 +19,7 @@ const I18N = {
     rendering: 'بيترندر…', done: 'جاهز!', error: 'حصل خطأ',
     presets: { cinematic: 'سينمائي', sports: 'رياضي', minimal: 'بسيط', club: 'نادي أوروبي' },
     aspects: { '9:16': 'ريل 9:16', '1:1': 'مربع 1:1', '16:9': 'عرضي 16:9' },
-    voReady: 'التعليق الصوتي جاهز', voFail: 'فشل توليد الصوت', noScenes: 'حلّل السكريبت الأول',
+    voReady: 'التعليق الصوتي جاهز', voFail: 'فشل توليد الصوت', voNeedKey: 'التوليد بالذكاء الاصطناعي محتاج مفتاح Gemini — ارفع تعليق صوتي جاهز تحته، أو ابعت المفتاح للمساعد يضيفه', noScenes: 'حلّل السكريبت الأول',
     newProject: '— مشروع جديد —', savedOk: 'اتحفظ', projectName: 'اسم المشروع؟',
   },
   en: {
@@ -42,7 +42,7 @@ const I18N = {
     rendering: 'Rendering…', done: 'Done!', error: 'Error',
     presets: { cinematic: 'Cinematic', sports: 'Sports', minimal: 'Minimal', club: 'Euro Club' },
     aspects: { '9:16': 'Reel 9:16', '1:1': 'Square 1:1', '16:9': 'Wide 16:9' },
-    voReady: 'Voiceover ready', voFail: 'Voiceover failed', noScenes: 'Analyze the script first',
+    voReady: 'Voiceover ready', voFail: 'Voiceover failed', voNeedKey: 'AI generation needs a Gemini key — upload a ready voiceover below, or send the key to the assistant to add it', noScenes: 'Analyze the script first',
     newProject: '— New project —', savedOk: 'Saved', projectName: 'Project name?',
   },
 };
