@@ -190,7 +190,7 @@ function sceneCard(s, i) {
   if (s.credit) {
     const credit = document.createElement('a');
     credit.href = s.credit.source; credit.target = '_blank'; credit.rel = 'noopener';
-    credit.textContent = 'Pixabay · ' + (s.credit.author || 'المصدر');
+    credit.textContent = (s.credit.provider || 'Pixabay') + ' · ' + (s.credit.author || 'المصدر');
     credit.className = 'hint'; body.appendChild(credit);
   }
   card.appendChild(thumb);
@@ -357,6 +357,8 @@ async function pollJob(jobId) {
     $('downloadLink').href = job.url;
     $('downloadLink').download = job.outName;
     $('downloadLink').style.display = 'block';
+    document.getElementById('creditsLink')?.remove();
+    if(job.creditsUrl){const a=document.createElement('a');a.id='creditsLink';a.href=job.creditsUrl;a.download='credits.txt';a.className='btn';a.textContent='تحميل المصادر والرخص، احتفظ بيها مع الفيديو';$('downloadLink').after(a);}
     loadPublishExtras(job);
     $('renderBtn').disabled = false;
     return;
@@ -569,7 +571,7 @@ bootApp();
 
 async function applyStock(s, item) {
   const {file} = await api('/api/stock/download', {method:'POST',body:JSON.stringify({token:item.token})});
-  s.media = file.name; s.credit = file.credit; s.previewUrl = null; s.logoMode = false;
+  s.media = file.name; s.stockNotice = null; s.credit = file.credit; s.previewUrl = null; s.logoMode = false;
   await refreshMedia(); renderScenes();
 }
 async function searchSceneStock(s, body) {
@@ -577,7 +579,7 @@ async function searchSceneStock(s, body) {
   const panel = document.createElement('div'); panel.className = 'stock-picker';
   const input = document.createElement('input'); input.placeholder = 'كلمات البحث بالإنجليزي، مثال: football stadium'; input.value = s.stockQuery || '';
   const type = document.createElement('select');
-  type.innerHTML = '<option value="video">فيديو</option><option value="image">صورة</option>';
+  type.innerHTML = '<option value="video">فيديو</option><option value="image">صورة Pixabay</option><option value="commons">صورة شخصية / Wikimedia</option>';
   const button = document.createElement('button'); button.className = 'mini'; button.textContent='بحث';
   const results = document.createElement('div'); results.className = 'stock-results';
   const status = document.createElement('div'); status.className='hint';
@@ -585,13 +587,13 @@ async function searchSceneStock(s, body) {
   const search = async () => {
     status.textContent='بيدور في Pixabay…'; button.disabled=true; results.replaceChildren();
     try {
-      const r=await api('/api/stock/search',{method:'POST',body:JSON.stringify({text:s.text,query:input.value,kind:type.value,aspect:state.aspect})});
+      const r=await api('/api/stock/search',{method:'POST',body:JSON.stringify({text:s.text,query:input.value,kind:type.value==='commons'?'image':type.value,provider:type.value==='commons'?'commons':'pixabay',aspect:state.aspect})});
       input.value=r.query; s.stockQuery=r.query;
-      status.textContent=r.items.length ? 'Pixabay. اختار لقطة وراجع ملاءمتها وحقوق الأشخاص والعلامات.' : 'مفيش لقطة مناسبة وواضحة. ارفع ميديا للمشهد أو عدّل البحث.';
+      status.textContent=r.items.length ? 'اختار لقطة وراجع ملاءمتها وحقوق الأشخاص والعلامات. صور Commons عليها اسم المصور والرخصة في الرندر.' : 'مفيش لقطة مناسبة وواضحة. ارفع ميديا للمشهد أو عدّل البحث.';
       for(const item of r.items){
         const wrap=document.createElement('div'); wrap.className='stock-result';
         const img=document.createElement('img'); img.src=item.preview; img.loading='lazy'; img.alt=item.tags || '';
-        const link=document.createElement('a'); link.href=item.source; link.target='_blank'; link.rel='noopener'; link.textContent='Pixabay · '+item.author;
+        const link=document.createElement('a'); link.href=item.source; link.target='_blank'; link.rel='noopener'; link.textContent=item.provider+' · '+item.author+(item.license?' · '+item.license:'');
         const use=document.createElement('button'); use.className='mini'; use.textContent='استخدم';
         use.onclick=async()=>{use.disabled=true;use.textContent='بيحمّل…';try{await applyStock(s,item);}catch(e){status.textContent=e.message;use.disabled=false;use.textContent='استخدم';}};
         wrap.append(img,link,use); results.appendChild(wrap);
@@ -619,6 +621,6 @@ async function autoStockScenes() {
     }catch(e){s.stockNotice=e.message;missed++;}
   }
   renderScenes();
-  status.textContent=`تم اختيار ${done} مشهد من Pixabay. ${missed ? missed+' مشهد محتاج رفع ميديا أو بحث أدق، مش هنحط لقطة ملهاش علاقة. ' : ''}راجع الاختيارات قبل النشر.`;
+  status.textContent=`تم اختيار ${done} مشهد من المصادر المرخصة. ${missed ? missed+' مشهد محتاج رفع ميديا أو بحث أدق، مش هنحط لقطة ملهاش علاقة. ' : ''}راجع الاختيارات قبل النشر.`;
   button.disabled=false;
 }

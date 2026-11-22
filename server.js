@@ -8,6 +8,7 @@ const { breakdown } = require('./lib/scenes');
 const { renderProject, previewScene } = require('./lib/render');
 const voiceover = require('./lib/voiceover');
 const stock = require('./lib/stock');
+const commons = require('./lib/commons');
 
 const ROOT = __dirname;
 const dirs = {
@@ -66,7 +67,7 @@ app.post('/api/login', (req, res) => {
   }
   res.status(401).json({ ok: false, message: 'wrong passcode' });
 });
-app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v3' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, build: 'kinetic-display-v4-commons' }));
 // Everything else under /api, and all user content, requires the gate.
 app.use((req, res, next) => {
   const p = req.path;
@@ -180,14 +181,18 @@ app.delete('/api/media/:name', (req, res) => {
 // ---------- legal stock ----------
 app.post('/api/stock/search', async (req, res) => {
   try {
-    if (stock.namedEntity(req.body.text) || stock.namedEntity(req.body.query)) return res.status(422).json({ok:false,message:'الشخص ده محتاج صورة أو فيديو ترفعه بنفسك. مش هنبدله بلقطة عامة.'});
+    const entity = commons.entity(req.body.text) || commons.entity(req.body.query);
+    if (entity || req.body.provider === 'commons') {
+      const query = entity || req.body.query || req.body.text;
+      return res.json({ok:true,query,provider:'Wikimedia Commons',items:await commons.search(query)});
+    }
     const query = req.body.query || stock.suggest(req.body.text);
     if (!query) return res.status(422).json({ok:false,message:'اكتب كلمات بحث بالإنجليزي للمشهد ده'});
     res.json({ok:true,query,items:await stock.search(query,req.body.kind,req.body.aspect || '9:16')});
   } catch(e) { res.status(503).json({ok:false,message:e.message}); }
 });
 app.post('/api/stock/download', async (req,res) => {
-  try { res.json({ok:true,file:await stock.download(req.body.token,dirs.uploads)}); }
+  try { res.json({ok:true,file:await (String(req.body.token).startsWith('commons-') ? commons : stock).download(req.body.token,dirs.uploads)}); }
   catch(e) { res.status(400).json({ok:false,message:e.message}); }
 });
 
@@ -320,11 +325,12 @@ app.post('/api/render', (req, res) => {
   const operation = renderQueue.then(() => renderProject(frozenProject, job, dirs));
   renderQueue = operation.catch(() => {});
   operation
-    .then(({ outName, duration }) => {
+    .then(({ outName, duration, creditsUrl }) => {
       job.status = 'done';
       job.outName = outName;
       job.url = '/renders/' + outName;
       job.duration = duration;
+      job.creditsUrl = creditsUrl;
       job.progress = 1;
     })
     .catch((e) => {

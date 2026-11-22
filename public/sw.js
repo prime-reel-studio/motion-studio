@@ -1,4 +1,4 @@
-const CACHE = 'prime-studio-v5';
+const CACHE = 'prime-studio-v6';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'i18n.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

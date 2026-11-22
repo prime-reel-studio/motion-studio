@@ -2,7 +2,7 @@
 """Shape short display beats once with HarfBuzz/FriBidi via Pillow/RAQM.
 No shell commands, network calls or text interpolation into filters.
 """
-import json, math, os, re, sys
+import json, math, os, re, sys, textwrap
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, features
 
 if not features.check('raqm'):
@@ -78,4 +78,18 @@ for gi, group in enumerate(groups):
                          'x': x, 'y': y, 'wordCount': revealed,
                          'entrance': (idx+gi)%3})
         cursor += 1
+credit = cfg.get('credit') or {}
+if credit.get('provider') == 'Wikimedia Commons':
+    # Persistent attribution survives posting, alongside the downloadable full credits.
+    font = ImageFont.truetype(font_path, max(22, round(W*.029)), layout_engine=RAQM)
+    lines = textwrap.wrap('Photo: ' + credit.get('author',''), width=46)[:3]
+    lines += [credit.get('license','') + ' | cropped & animated', credit.get('licenseUrl','').replace('https://','').replace('http://','')]
+    lh = round(W*.044)
+    img = Image.new('RGBA',(round(W*.94), lh*len(lines)+28),(0,0,0,145))
+    draw = ImageDraw.Draw(img)
+    for n,line in enumerate(lines):
+        draw.text((14, 10+n*lh),line,font=font,fill='white',direction='ltr')
+    name = os.path.join(cfg['outDir'], 'credit_%s.png' % idx)
+    img.save(name)
+    manifest.append({'file':name,'start':0,'end':duration,'x':round(W*.03),'y':round(H*.95)-img.height,'wordCount':0,'entrance':3})
 print(json.dumps(manifest))
